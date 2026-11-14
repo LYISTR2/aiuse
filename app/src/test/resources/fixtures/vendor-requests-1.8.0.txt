@@ -1,0 +1,104 @@
+claude_sub
+ [sample]
+  GET https://api.anthropic.com/api/oauth/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+    anthropic-beta: oauth-2025-04-20
+    User-Agent: claude-code/2.1.325
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[Metric(label=5 小时, balanceMinor=null, currency=null, usedPercent=37.0, quotaMinor=null, note=已用 37% · 11-14 10:00 重置), Metric(label=每周, balanceMinor=null, currency=null, usedPercent=81.5, quotaMinor=null, note=已用 81% · 11-18 00:00 重置)])
+ [empty]
+  GET https://api.anthropic.com/api/oauth/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+    anthropic-beta: oauth-2025-04-20
+    User-Agent: claude-code/2.1.325
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=该账号未返回订阅额度（需要 Pro / Max）, metrics=[])
+ [garbage]
+  GET https://api.anthropic.com/api/oauth/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+    anthropic-beta: oauth-2025-04-20
+    User-Agent: claude-code/2.1.325
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=响应不是合法 JSON, metrics=[])
+ [401]
+  GET https://api.anthropic.com/api/oauth/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+    anthropic-beta: oauth-2025-04-20
+    User-Agent: claude-code/2.1.325
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=登录已失效，请删除后重新登录（401）, metrics=[])
+chatgpt_sub
+ [sample]
+  GET https://chatgpt.com/backend-api/wham/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+    originator: codex_cli_rs
+    User-Agent: codex_cli_rs
+    ChatGPT-Account-Id: acct-123
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=套餐: plus, error=null, metrics=[Metric(label=5 小时, balanceMinor=null, currency=null, usedPercent=12.0, quotaMinor=null, note=已用 12% · 11-14 09:00 重置), Metric(label=每周, balanceMinor=null, currency=null, usedPercent=64.0, quotaMinor=null, note=已用 64% · 11-17 17:20 重置)])
+ [empty]
+  GET https://chatgpt.com/backend-api/wham/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+    originator: codex_cli_rs
+    User-Agent: codex_cli_rs
+    ChatGPT-Account-Id: acct-123
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=该账号未返回订阅额度, metrics=[])
+ [garbage]
+  GET https://chatgpt.com/backend-api/wham/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+    originator: codex_cli_rs
+    User-Agent: codex_cli_rs
+    ChatGPT-Account-Id: acct-123
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=响应不是合法 JSON, metrics=[])
+ [401]
+  GET https://chatgpt.com/backend-api/wham/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+    originator: codex_cli_rs
+    User-Agent: codex_cli_rs
+    ChatGPT-Account-Id: acct-123
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=登录已失效，请删除后重新登录（401）, metrics=[])
+opencode_go
+ [sample]
+  GET https://opencode.ai/zen/go/v1/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[Metric(label=5 小时, balanceMinor=null, currency=null, usedPercent=42.0, quotaMinor=null, note=已用 42% · 11-14 17:00 重置), Metric(label=每周, balanceMinor=null, currency=null, usedPercent=18.0, quotaMinor=null, note=已用 18% · 11-17 00:00 重置), Metric(label=每月, balanceMinor=null, currency=null, usedPercent=100.0, quotaMinor=null, note=已用 100% · 12-01 00:00 重置)])
+ [empty]
+  GET https://opencode.ai/zen/go/v1/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=该账号未返回 Go 额度, metrics=[])
+ [garbage]
+  GET https://opencode.ai/zen/go/v1/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=响应不是合法 JSON, metrics=[])
+ [401]
+  GET https://opencode.ai/zen/go/v1/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
+command_code
+ [sample]
+  GET https://api.commandcode.ai/alpha/billing/credits
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[Metric(label=5 小时, balanceMinor=null, currency=null, usedPercent=25.0, quotaMinor=null, note=已用 25% · 05-28 20:26 重置), Metric(label=每周, balanceMinor=null, currency=null, usedPercent=10.0, quotaMinor=null, note=已用 10% · 05-30 00:13 重置), Metric(label=剩余额度, balanceMinor=850, currency=USD, usedPercent=null, quotaMinor=null, note=null)])
+ [empty]
+  GET https://api.commandcode.ai/alpha/billing/credits
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=该账号未返回用量数据, metrics=[])
+ [garbage]
+  GET https://api.commandcode.ai/alpha/billing/credits
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=响应不是合法 JSON, metrics=[])
+ [401]
+  GET https://api.commandcode.ai/alpha/billing/credits
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])

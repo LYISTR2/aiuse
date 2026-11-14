@@ -1,0 +1,32 @@
+# Gradle
+.gradle/
+build/
+app/build/
+.kotlin/
+
+# 本地配置（含本机 Android SDK 路径，每台机器不同，绝不能提交）
+local.properties
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+captures/
+
+# 构建产物
+*.aab
+*.ap_
+*.dex
+*.class
+
+# 发布用 APK 例外：release/ 目录下允许入库
+!release/*.apk
+
+# 签名密钥 —— 绝对不要提交
+*.jks
+*.keystore
+keystore.properties
+
+# 日志与临时文件
+*.log
+*.hprof

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 用量账本图标：三根递增柱，纯白前景，深色底。
+     内容包围盒精确居中于 108dp 画布的 (54,54)。
+     圆角矩形路径从 (x0+r, y0) 起笔，四弧偏移 (+r,+r)(-r,+r)(-r,-r)(+r,-r)。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M27.803,53.577 h9.085 a3.803,3.803 0 0 1 3.803,3.803 v18.486 a3.803,3.803 0 0 1 -3.803,3.803 h-9.085 a3.803,3.803 0 0 1 -3.803,-3.803 v-18.486 a3.803,3.803 0 0 1 3.803,-3.803 Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M49.352,41.958 h9.085 a3.803,3.803 0 0 1 3.803,3.803 v30.106 a3.803,3.803 0 0 1 -3.803,3.803 h-9.085 a3.803,3.803 0 0 1 -3.803,-3.803 v-30.106 a3.803,3.803 0 0 1 3.803,-3.803 Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M71.007,28.331 h9.190 a3.803,3.803 0 0 1 3.803,3.803 v43.732 a3.803,3.803 0 0 1 -3.803,3.803 h-9.190 a3.803,3.803 0 0 1 -3.803,-3.803 v-43.732 a3.803,3.803 0 0 1 3.803,-3.803 Z"/>
+</vector>

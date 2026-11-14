@@ -1,0 +1,260 @@
+deepseek
+ [sample]
+  GET https://api.deepseek.com/user/balance
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=11025, currency=CNY, usedTokens=null, quotaTokens=null, note=可用: true, error=null, metrics=[])
+ [empty]
+  GET https://api.deepseek.com/user/balance
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=CNY, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[])
+ [garbage]
+  GET https://api.deepseek.com/user/balance
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=Element class kotlinx.serialization.json.JsonLiteral (Kotlin reflection is not available) is not a JsonObject, metrics=[])
+ [401]
+  GET https://api.deepseek.com/user/balance
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
+anthropic
+ [sample]
+  GET https://api.anthropic.com/api/oauth/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+    anthropic-beta: oauth-2025-04-20
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=5h 窗口已用 37%, error=null, metrics=[])
+ [empty]
+  GET https://api.anthropic.com/api/oauth/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+    anthropic-beta: oauth-2025-04-20
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[])
+ [garbage]
+  GET https://api.anthropic.com/api/oauth/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+    anthropic-beta: oauth-2025-04-20
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=Element class kotlinx.serialization.json.JsonLiteral (Kotlin reflection is not available) is not a JsonObject, metrics=[])
+ [401]
+  GET https://api.anthropic.com/api/oauth/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+    anthropic-beta: oauth-2025-04-20
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
+openai
+ [sample]
+  GET https://api.openai.com/v1/me
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=组织: Acme, error=null, metrics=[])
+ [empty]
+  GET https://api.openai.com/v1/me
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=已认证, error=null, metrics=[])
+ [garbage]
+  GET https://api.openai.com/v1/me
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=Element class kotlinx.serialization.json.JsonLiteral (Kotlin reflection is not available) is not a JsonObject, metrics=[])
+ [401]
+  GET https://api.openai.com/v1/me
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
+kimi
+ [sample]
+  GET https://api.moonshot.cn/v1/users/me/balance
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=1250, currency=CNY, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[])
+ [empty]
+  GET https://api.moonshot.cn/v1/users/me/balance
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=CNY, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[])
+ [garbage]
+  GET https://api.moonshot.cn/v1/users/me/balance
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=Element class kotlinx.serialization.json.JsonLiteral (Kotlin reflection is not available) is not a JsonObject, metrics=[])
+ [401]
+  GET https://api.moonshot.cn/v1/users/me/balance
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
+zhipu
+ [sample]
+  GET https://open.bigmodel.cn/api/paas/v4/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=ok, error=null, metrics=[])
+ [empty]
+  GET https://open.bigmodel.cn/api/paas/v4/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=已认证, error=null, metrics=[])
+ [garbage]
+  GET https://open.bigmodel.cn/api/paas/v4/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=Element class kotlinx.serialization.json.JsonLiteral (Kotlin reflection is not available) is not a JsonObject, metrics=[])
+ [401]
+  GET https://open.bigmodel.cn/api/paas/v4/usage
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
+xai
+ [sample]
+  GET https://cli-chat-proxy.grok.com/v1/billing?format=credits
+    Authorization: Bearer sk-test-token-1234567890
+    x-xai-token-auth: xai-grok-cli
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[Metric(label=周额度, balanceMinor=null, currency=null, usedPercent=12.5, quotaMinor=null, note=已用 12% · 11-20 重置), Metric(label=SuperGrok, balanceMinor=null, currency=null, usedPercent=20.0, quotaMinor=null, note=已用 20%), Metric(label=预付, balanceMinor=500, currency=USD, usedPercent=null, quotaMinor=null, note=null), Metric(label=按量, balanceMinor=750, currency=USD, usedPercent=null, quotaMinor=1000, note=null)])
+ [empty]
+  GET https://cli-chat-proxy.grok.com/v1/billing?format=credits
+    Authorization: Bearer sk-test-token-1234567890
+    x-xai-token-auth: xai-grok-cli
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=该账号未返回用量数据, metrics=[])
+ [garbage]
+  GET https://cli-chat-proxy.grok.com/v1/billing?format=credits
+    Authorization: Bearer sk-test-token-1234567890
+    x-xai-token-auth: xai-grok-cli
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=响应不是合法 JSON, metrics=[])
+ [401]
+  GET https://cli-chat-proxy.grok.com/v1/billing?format=credits
+    Authorization: Bearer sk-test-token-1234567890
+    x-xai-token-auth: xai-grok-cli
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
+mistral
+ [sample]
+  GET https://api.mistral.ai/v1/billing/budget
+    x-api-key: sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=4200, currency=EUR, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[Metric(label=API, balanceMinor=4200, currency=EUR, usedPercent=16.0, quotaMinor=5000, note=已用 16%), Metric(label=Vibe, balanceMinor=null, currency=null, usedPercent=42.5, quotaMinor=null, note=已用 42% · 按量超支已开启)])
+ [empty]
+  GET https://api.mistral.ai/v1/billing/budget
+    x-api-key: sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=未返回预算信息, metrics=[])
+ [garbage]
+  GET https://api.mistral.ai/v1/billing/budget
+    x-api-key: sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=Element class kotlinx.serialization.json.JsonLiteral (Kotlin reflection is not available) is not a JsonObject, metrics=[])
+ [401]
+  GET https://api.mistral.ai/v1/billing/budget
+    x-api-key: sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
+openrouter
+ [sample]
+  GET https://openrouter.ai/api/v1/key
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=1450, currency=USD, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[Metric(label=额度, balanceMinor=1450, currency=USD, usedPercent=27.500000000000004, quotaMinor=2000, note=已用 $5.50), Metric(label=日预算, balanceMinor=300, currency=USD, usedPercent=null, quotaMinor=null, note=上限 $5.00)])
+ [empty]
+  GET https://openrouter.ai/api/v1/key
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=已认证, error=null, metrics=[])
+ [garbage]
+  GET https://openrouter.ai/api/v1/key
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=响应不是合法 JSON, metrics=[])
+ [401]
+  GET https://openrouter.ai/api/v1/key
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
+siliconflow
+ [sample]
+  GET https://api.siliconflow.cn/v1/user/info
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=980, currency=CNY, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[Metric(label=余额, balanceMinor=980, currency=CNY, usedPercent=null, quotaMinor=null, note=null), Metric(label=赠金, balanceMinor=480, currency=CNY, usedPercent=null, quotaMinor=null, note=null)])
+ [empty]
+  GET https://api.siliconflow.cn/v1/user/info
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=响应缺少 data, metrics=[])
+ [garbage]
+  GET https://api.siliconflow.cn/v1/user/info
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=响应不是合法 JSON, metrics=[])
+ [401]
+  GET https://api.siliconflow.cn/v1/user/info
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
+novita
+ [sample]
+  GET https://api.novita.ai/openapi/v1/billing/balance/detail
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=1235, currency=USD, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[Metric(label=余额, balanceMinor=1235, currency=USD, usedPercent=null, quotaMinor=null, note=信用额度 $5.00), Metric(label=充值余额, balanceMinor=1000, currency=USD, usedPercent=null, quotaMinor=null, note=null)])
+ [empty]
+  GET https://api.novita.ai/openapi/v1/billing/balance/detail
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=未返回余额字段, metrics=[])
+ [garbage]
+  GET https://api.novita.ai/openapi/v1/billing/balance/detail
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=响应不是合法 JSON, metrics=[])
+ [401]
+  GET https://api.novita.ai/openapi/v1/billing/balance/detail
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
+deepinfra
+ [sample]
+  GET https://api.deepinfra.com/payment/checklist
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=1234, currency=USD, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[Metric(label=余额, balanceMinor=1234, currency=USD, usedPercent=null, quotaMinor=null, note=prepaid), Metric(label=活动, balanceMinor=250, currency=USD, usedPercent=null, quotaMinor=null, note=限定用途), Metric(label=消费上限, balanceMinor=null, currency=USD, usedPercent=null, quotaMinor=null, note=$100.00)])
+ [empty]
+  GET https://api.deepinfra.com/payment/checklist
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=未返回计费信息, metrics=[])
+ [garbage]
+  GET https://api.deepinfra.com/payment/checklist
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=响应不是合法 JSON, metrics=[])
+ [401]
+  GET https://api.deepinfra.com/payment/checklist
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
+stepfun
+ [sample]
+  GET https://api.stepfun.com/v1/accounts
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=770, currency=CNY, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[Metric(label=余额, balanceMinor=770, currency=CNY, usedPercent=null, quotaMinor=null, note=预付费), Metric(label=赠金, balanceMinor=200, currency=CNY, usedPercent=null, quotaMinor=null, note=null), Metric(label=累计充值, balanceMinor=1000, currency=CNY, usedPercent=null, quotaMinor=null, note=null)])
+ [empty]
+  GET https://api.stepfun.com/v1/accounts
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=未返回余额字段, metrics=[])
+ [garbage]
+  GET https://api.stepfun.com/v1/accounts
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=响应不是合法 JSON, metrics=[])
+ [401]
+  GET https://api.stepfun.com/v1/accounts
+    Authorization: Bearer sk-test-token-1234567890
+    Accept: application/json
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=HTTP 401: {"error":"invalid key ***"}, metrics=[])
