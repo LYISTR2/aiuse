@@ -1,27 +1,37 @@
 package ltd.usage.tracker.ui.home
 
-import androidx.compose.runtime.*
-import androidx.compose.material3.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 import ltd.usage.tracker.data.UsageSnapshot
-import ltd.usage.tracker.fx.Fx
 import ltd.usage.tracker.ui.SortMode
 import ltd.usage.tracker.ui.UiState
 import ltd.usage.tracker.ui.account.AccountRow
 import ltd.usage.tracker.ui.format.formatTime
 import ltd.usage.tracker.ui.sortAccounts
 import ltd.usage.tracker.ui.theme.Motion
-import ltd.usage.tracker.ui.theme.Palette
 import ltd.usage.tracker.ui.theme.Type
 
 // ---------------------------------------------------------------- 服务列表
@@ -34,84 +44,43 @@ internal fun ServicesContent(
     onCurrencyChange: (String) -> Unit = {},
     onMove: (Int, Int) -> Unit = { _, _ -> },
     onAdd: () -> Unit = {},
+    listState: LazyListState = rememberLazyListState(),
+    contentPadding: PaddingValues = PaddingValues(bottom = 12.dp),
+    refreshing: Boolean = false,
 ) {
     if (state.accounts.isEmpty()) {
         EmptyState(onAdd = onAdd)
         return
     }
 
-    // 展示顺序：手动模式用存储顺序，其余按规则重排（不改存储）
     val ordered = remember(state.accounts, state.sortMode, state.displayCurrency, state.snapshots) {
         sortAccounts(state.accounts, state.sortMode, state.displayCurrency, latestFor)
     }
     val manual = state.sortMode == SortMode.MANUAL
-
-    // 汇总：全部换算到展示币种后累加。
-    // 换算经 USD 中转，汇率由 Fx 提供；拿不到实时汇率时用缓存/兜底值，
-    // 不阻断展示，但会在副标题标注「离线汇率」。
     val target = state.displayCurrency
-    var converted = 0L
-    var convertedAny = false
-    val unconvertible = mutableSetOf<String>()
-
-    state.accounts.forEach { acc ->
-        val snap = latestFor(acc.id)?.takeIf { it.error == null } ?: return@forEach
-        val fromMetrics = snap.metrics.mapNotNull { m ->
-            m.balanceMinor?.let { (m.currency ?: snap.currency ?: target) to it }
-        }
-        if (fromMetrics.isNotEmpty()) {
-            fromMetrics.forEach { (cur, v) ->
-                val r = runCatching { Fx.convert(v, cur, target) }.getOrNull()
-                if (r != null) {
-                    converted += r
-                    convertedAny = true
-                } else {
-                    unconvertible += cur
-                }
-            }
-        } else {
-            snap.balanceMinor?.let {
-                val cur = snap.currency ?: target
-                val r = runCatching { Fx.convert(it, cur, target) }.getOrNull()
-                if (r != null) {
-                    converted += r
-                    convertedAny = true
-                } else {
-                    unconvertible += cur
-                }
-            }
-        }
-    }
-    val total = if (convertedAny) converted else null
-
-    // 有账号只有百分比额度、没有金额时，汇总金额不能代表全部，需提示
-    val hasPercentOnly = state.accounts.any { acc ->
-        val snap = latestFor(acc.id)?.takeIf { it.error == null } ?: return@any false
-        snap.balanceMinor == null && snap.metrics.any { it.usedPercent != null }
+    val summary = remember(state.accounts, state.displayCurrency, state.snapshots) {
+        computeUsageSummary(state.accounts, target, latestFor)
     }
 
-    val reorder = rememberReorderState(ordered, onMove)
+    val reorder = rememberReorderState(ordered, onMove, listState)
+    val haptic = LocalHapticFeedback.current
 
     LazyColumn(
-        state = reorder.listState,
-        contentPadding = PaddingValues(bottom = 12.dp),
+        state = listState,
+        contentPadding = contentPadding,
     ) {
         item {
             SummaryRow(
-                total = total,
+                total = summary.total,
                 currency = target,
                 count = state.accounts.size,
-                otherCurrencies = unconvertible,
-                hasPercentOnly = hasPercentOnly,
+                otherCurrencies = summary.unconvertible,
+                hasPercentOnly = summary.hasPercentOnly,
                 fxLive = state.fxLive,
                 onCurrencyChange = onCurrencyChange,
             )
         }
         itemsIndexed(ordered, key = { _, a -> a.id }) { index, account ->
-            // 入场动画：原来的 AnimatedVisibility 会多包一层布局容器，拖动重组时可能多一帧延迟。
-            // animateItem 的 fadeInSpec 只对「列表已存在后新插入」的项生效，首屏那批不会淡入，
-            // 所以首屏的错峰淡入 + 上滑用一次性的进度值在 graphicsLayer 里画，不参与布局。
-            // rememberSaveable 让滑出屏幕再滑回来的行不重播入场。
             var entered by rememberSaveable { mutableStateOf(false) }
             val enter = remember { Animatable(if (entered) 1f else 0f) }
             LaunchedEffect(Unit) {
@@ -123,12 +92,9 @@ internal fun ServicesContent(
             }
             val dragging = reorder.draggingId == account.id
             val lifted = reorder.isLifted(account.id)
-            Box(
+            androidx.compose.foundation.layout.Box(
                 Modifier
-                    // 拖起来的行（含回弹中）要压在其他行上面，否则会被相邻行遮住
                     .zIndex(if (lifted) 1f else 0f)
-                    // 被拖的行跟手指走，不能再叠位移动画，否则两者互相打架会抖；
-                    // 回弹期间也只关这一行，其余行照常用弹簧让位，形成「互相挤压」的效果
                     .animateItem(
                         fadeInSpec = Motion.effectsFast(),
                         fadeOutSpec = null,
@@ -137,13 +103,27 @@ internal fun ServicesContent(
                             stiffness = 900f,
                         ),
                     )
-                    // 所有状态都在 lambda 内读取：位移变化只触发重绘，不触发重组和重新布局
                     .graphicsLayer {
                         val p = enter.value
                         alpha = p.coerceIn(0f, 1f)
                         translationY = (1f - p) * size.height / 4f + reorder.translationOf(account.id)
                     }
-                    .then(if (manual) Modifier.reorderable(reorder, account.id) else Modifier),
+                    .then(
+                        if (manual) {
+                            Modifier.reorderable(
+                                reorder,
+                                account.id,
+                                onPickUp = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                                },
+                                onPutDown = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                },
+                            )
+                        } else {
+                            Modifier
+                        },
+                    ),
             ) {
                 AccountRow(
                     account = account,
@@ -151,8 +131,11 @@ internal fun ServicesContent(
                     displayCurrency = target,
                     onDelete = { onDelete(account.id) },
                     dragging = dragging,
-                    // 任何一行在拖动或回弹时都关掉左滑，避免横竖两个手势同时生效
+                    lifted = lifted,
                     swipeEnabled = !reorder.isActive,
+                    index = index,
+                    count = ordered.size,
+                    refreshing = refreshing,
                 )
             }
         }
@@ -162,8 +145,8 @@ internal fun ServicesContent(
                 Text(
                     "更新于 ${formatTime(last)}",
                     fontSize = Type.CaptionSize.sp,
-                    color = Palette.TextTertiary,
-                    modifier = Modifier.padding(start = 20.dp, top = 16.dp),
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 8.dp),
                 )
             }
         }

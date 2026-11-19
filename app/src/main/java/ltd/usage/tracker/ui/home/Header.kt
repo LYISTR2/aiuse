@@ -1,138 +1,130 @@
 package ltd.usage.tracker.ui.home
 
-import androidx.compose.runtime.*
-import androidx.compose.material3.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SwapVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ltd.usage.tracker.ui.SortMode
-import ltd.usage.tracker.ui.theme.Palette
 import ltd.usage.tracker.ui.theme.Type
 
-// ---------------------------------------------------------------- 头部
+// ---------------------------------------------------------------- 顶栏操作
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal fun Header(
+internal fun HeaderActions(
     refreshing: Boolean,
     dark: Boolean,
     sortMode: SortMode,
+    dynamicColor: Boolean,
+    dynamicColorAvailable: Boolean,
     onRefresh: () -> Unit,
-    onAdd: () -> Unit,
     onToggleTheme: () -> Unit,
     onSortModeChange: (SortMode) -> Unit,
+    onDynamicColorChange: (Boolean) -> Unit,
 ) {
     var sortMenu by remember { mutableStateOf(false) }
+    var settingsMenu by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, end = 7.dp, top = 18.dp, bottom = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // 图标按钮已是 48dp 触控区，相邻按钮之间不再加间距；右内边距 7dp 让最右图标的位置与旧版一致
-        Text(
-            "用量",
-            fontSize = Type.HeadlineSize.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Palette.TextPrimary,
-            letterSpacing = (-0.3).sp,
-        )
-        Spacer(Modifier.weight(1f))
-        // 排序入口：非手动模式时图标加重，让「当前不是自定义顺序」一眼可见
-        Box {
-            IconAction(
+    Box {
+        IconButton(onClick = { sortMenu = true }) {
+            Icon(
                 Icons.Outlined.SwapVert,
-                "排序：${sortMode.label}",
-                false,
-                { sortMenu = true },
-                emphasized = sortMode != SortMode.MANUAL,
+                contentDescription = "排序：${sortMode.label}",
+                tint = if (sortMode != SortMode.MANUAL) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             )
-            DropdownMenu(
-                expanded = sortMenu,
-                onDismissRequest = { sortMenu = false },
-                containerColor = Palette.SurfaceHover,
-            ) {
-                SortMode.entries.forEach { mode ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                mode.label,
-                                fontSize = Type.BodySize.sp,
-                                color = if (mode == sortMode) Palette.TextPrimary else Palette.TextSecondary,
-                                fontWeight = if (mode == sortMode) FontWeight.SemiBold else FontWeight.Normal,
-                            )
-                        },
-                        trailingIcon = {
-                            if (mode == sortMode) {
-                                Icon(
-                                    Icons.Outlined.Check,
-                                    null,
-                                    tint = Palette.TextPrimary,
-                                    modifier = Modifier.size(15.dp),
-                                )
-                            }
-                        },
-                        onClick = {
-                            onSortModeChange(mode)
-                            sortMenu = false
-                        },
-                    )
-                }
+        }
+        DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+            SortMode.entries.forEach { mode ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            mode.label,
+                            fontSize = Type.BodySize.sp,
+                            fontWeight = if (mode == sortMode) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                    },
+                    trailingIcon = {
+                        if (mode == sortMode) {
+                            Icon(Icons.Outlined.Check, null, modifier = Modifier.size(15.dp))
+                        }
+                    },
+                    onClick = {
+                        onSortModeChange(mode)
+                        sortMenu = false
+                    },
+                )
             }
         }
-        IconAction(
-            if (dark) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-            if (dark) "切换浅色" else "切换深色",
-            false,
-            onToggleTheme,
-        )
-        IconAction(Icons.Outlined.Refresh, "刷新", refreshing, onRefresh)
-        IconAction(Icons.Outlined.Add, "添加", false, onAdd)
     }
-}
-
-@Composable
-private fun IconAction(
-    icon: ImageVector,
-    label: String,
-    spinning: Boolean,
-    onClick: () -> Unit,
-    emphasized: Boolean = false,
-) {
-    val transition = rememberInfiniteTransition(label = "spin")
-    val angle by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing)),
-        label = "angle",
-    )
-    Box(
-        modifier = Modifier
-            // 48dp 是 Material 最小触控尺寸；图标仍 19dp，视觉不变
-            .size(48.dp)
-            .clip(CircleShape)
-            .clickable(enabled = !spinning, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
+    IconButton(onClick = onToggleTheme) {
         Icon(
-            icon,
-            contentDescription = label,
-            tint = if (emphasized) Palette.TextPrimary else Palette.TextSecondary,
-            modifier = Modifier
-                .size(19.dp)
-                .rotate(if (spinning) angle else 0f),
+            if (dark) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
+            contentDescription = if (dark) "切换浅色" else "切换深色",
         )
+    }
+    if (refreshing) {
+        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            LoadingIndicator(Modifier.size(24.dp))
+        }
+    } else {
+        IconButton(onClick = onRefresh) {
+            Icon(Icons.Outlined.Refresh, contentDescription = "刷新")
+        }
+    }
+    Box {
+        IconButton(onClick = { settingsMenu = true }) {
+            Icon(Icons.Outlined.Settings, contentDescription = "设置")
+        }
+        DropdownMenu(expanded = settingsMenu, onDismissRequest = { settingsMenu = false }) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (dynamicColorAvailable) "动态取色" else "动态取色（需 Android 12+）",
+                        fontSize = Type.BodySize.sp,
+                    )
+                },
+                trailingIcon = {
+                    Switch(
+                        checked = dynamicColor && dynamicColorAvailable,
+                        onCheckedChange = {
+                            if (dynamicColorAvailable) onDynamicColorChange(it)
+                        },
+                        enabled = dynamicColorAvailable,
+                    )
+                },
+                onClick = {
+                    if (dynamicColorAvailable) onDynamicColorChange(!dynamicColor)
+                },
+            )
+        }
     }
 }

@@ -1,6 +1,12 @@
 package ltd.usage.tracker.ui
 
 import ltd.usage.tracker.ui.home.ServicesContent
+import ltd.usage.tracker.ui.home.UsageHome
+import ltd.usage.tracker.ui.add.AddAccountForm
+import ltd.usage.tracker.ui.add.AddMethod
+import ltd.usage.tracker.ui.login.SubscriptionLoginCardPreview
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.remember
 import ltd.usage.tracker.ui.login.XaiLoginCardPreview
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
@@ -13,6 +19,8 @@ import androidx.compose.ui.test.captureToImage
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import ltd.usage.tracker.data.Metric
 import ltd.usage.tracker.data.Provider
 import ltd.usage.tracker.data.StoredAccount
@@ -312,4 +320,233 @@ class ScreenshotTest {
             )
         }
     }
+
+
+    private fun sampleHomeState(): Pair<List<StoredAccount>, List<UsageSnapshot>> {
+        val now = System.currentTimeMillis()
+        val accounts = listOf(
+            StoredAccount("a1", "deepseek", "DeepSeek", now, now),
+            StoredAccount("a2", "mistral", "Mistral", now, now),
+            StoredAccount("a3", "anthropic", "Claude Pro", now, now),
+        )
+        val snapshots = listOf(
+            UsageSnapshot("a1", now, balanceMinor = 12_345, currency = "CNY", note = "可用: true"),
+            UsageSnapshot(
+                accountId = "a2",
+                capturedAt = now,
+                balanceMinor = 1_600,
+                currency = "USD",
+                metrics = listOf(
+                    Metric("API", balanceMinor = 600, currency = "USD", usedPercent = 40.0, quotaMinor = 1_000, note = "已用 $4.00"),
+                    Metric("Vibe", balanceMinor = 600, currency = "USD", usedPercent = 96.0, quotaMinor = 15_000, note = "已用 $144.00"),
+                ),
+            ),
+            UsageSnapshot("a3", now, note = "5h 窗口已用 42%", metrics = listOf(Metric("5h", usedPercent = 42.0))),
+        )
+        return accounts to snapshots
+    }
+
+    @Test
+    fun homeDark190() {
+        val (accounts, snapshots) = sampleHomeState()
+        render("190-home-dark", dark = true) {
+            UsageHome(
+                state = UiState(accounts = accounts, snapshots = snapshots, displayCurrency = "USD", fxLive = true, dynamicColor = false),
+                latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                onRefresh = {},
+                onAdd = {},
+                onToggleTheme = {},
+                onSortModeChange = {},
+                onDynamicColorChange = {},
+                onDelete = {},
+                onCurrencyChange = {},
+                onMove = { _, _ -> },
+                snackbar = remember { SnackbarHostState() },
+                dynamicColorAvailable = false,
+            )
+        }
+    }
+
+    @Test
+    fun homeLight190() {
+        val (accounts, snapshots) = sampleHomeState()
+        render("190-home-light", dark = false) {
+            UsageHome(
+                state = UiState(accounts = accounts, snapshots = snapshots, displayCurrency = "USD", fxLive = true, dark = false, dynamicColor = false),
+                latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                onRefresh = {},
+                onAdd = {},
+                onToggleTheme = {},
+                onSortModeChange = {},
+                onDynamicColorChange = {},
+                onDelete = {},
+                onCurrencyChange = {},
+                onMove = { _, _ -> },
+                snackbar = remember { SnackbarHostState() },
+                dynamicColorAvailable = false,
+            )
+        }
+    }
+
+    @Test
+    fun homeDark191() {
+        val (accounts, snapshots) = sampleHomeState()
+        render("191-home-dark", dark = true) {
+            UsageHome(
+                state = UiState(accounts = accounts, snapshots = snapshots, displayCurrency = "USD", fxLive = true, dynamicColor = false),
+                latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                onRefresh = {},
+                onAdd = {},
+                onToggleTheme = {},
+                onSortModeChange = {},
+                onDynamicColorChange = {},
+                onDelete = {},
+                onCurrencyChange = {},
+                onMove = { _, _ -> },
+                snackbar = remember { SnackbarHostState() },
+                dynamicColorAvailable = false,
+            )
+        }
+    }
+
+    @Test
+    fun homeLight191() {
+        val (accounts, snapshots) = sampleHomeState()
+        render("191-home-light", dark = false) {
+            UsageHome(
+                state = UiState(accounts = accounts, snapshots = snapshots, displayCurrency = "USD", fxLive = true, dark = false, dynamicColor = false),
+                latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                onRefresh = {},
+                onAdd = {},
+                onToggleTheme = {},
+                onSortModeChange = {},
+                onDynamicColorChange = {},
+                onDelete = {},
+                onCurrencyChange = {},
+                onMove = { _, _ -> },
+                snackbar = remember { SnackbarHostState() },
+                dynamicColorAvailable = false,
+            )
+        }
+    }
+
+
+    private fun renderCollapsedHome(name: String, dark: Boolean) {
+        val (accounts, snapshots) = sampleHomeState()
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            UsageTrackerTheme(dark = dark) {
+                Box(Modifier.fillMaxSize().background(Palette.Bg)) {
+                    UsageHome(
+                        state = UiState(
+                            accounts = accounts,
+                            snapshots = snapshots,
+                            displayCurrency = "USD",
+                            fxLive = true,
+                            dark = dark,
+                            dynamicColor = false,
+                        ),
+                        latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                        onRefresh = {},
+                        onAdd = {},
+                        onToggleTheme = {},
+                        onSortModeChange = {},
+                        onDynamicColorChange = {},
+                        onDelete = {},
+                        onCurrencyChange = {},
+                        onMove = { _, _ -> },
+                        snackbar = remember { SnackbarHostState() },
+                        dynamicColorAvailable = false,
+                    )
+                }
+            }
+        }
+        compose.mainClock.advanceTimeBy(1_500)
+        // 尝试上滑收起 LargeFlexibleTopAppBar；Robolectric 下 nested scroll 可能无效
+        compose.onRoot().performTouchInput {
+            swipeUp()
+            swipeUp()
+        }
+        compose.mainClock.advanceTimeBy(1_200)
+        val view = compose.activity!!.window.decorView
+        val w = if (view.width > 0) view.width else 1080
+        val h = if (view.height > 0) view.height else 2340
+        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        view.draw(canvas)
+        save(name, bmp)
+    }
+
+    @Test
+    fun homeDark191Collapsed() {
+        renderCollapsedHome("191-home-dark-collapsed", dark = true)
+    }
+
+    @Test
+    fun homeLight191Collapsed() {
+        renderCollapsedHome("191-home-light-collapsed", dark = false)
+    }
+
+    @Test
+    fun addFormDark190() {
+        render("190-add-dark", dark = true) {
+            AddAccountForm(
+                onDismiss = {},
+                onConfirm = { _, _, _ -> },
+                onXaiLogin = {},
+                onSubscriptionLogin = {},
+                initialProvider = Provider.ANTHROPIC,
+                initialMethod = AddMethod.SUBSCRIPTION,
+            )
+        }
+    }
+
+    @Test
+    fun addFormLight190() {
+        render("190-add-light", dark = false) {
+            AddAccountForm(
+                onDismiss = {},
+                onConfirm = { _, _, _ -> },
+                onXaiLogin = {},
+                onSubscriptionLogin = {},
+                initialProvider = Provider.ANTHROPIC,
+                initialMethod = AddMethod.SUBSCRIPTION,
+            )
+        }
+    }
+
+    @Test
+    fun loginDialogDark190() {
+        render("190-login-dark", dark = true) {
+            XaiLoginCardPreview(
+                login = XaiLogin(
+                    userCode = "R8R4-BHJG",
+                    verificationUri = "https://accounts.x.ai/oauth2/device?user_code=R8R4-BHJG",
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun loginDialogLight190() {
+        render("190-login-light", dark = false) {
+            XaiLoginCardPreview(
+                login = XaiLogin(
+                    userCode = "R8R4-BHJG",
+                    verificationUri = "https://accounts.x.ai/oauth2/device?user_code=R8R4-BHJG",
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun claudeLoginDark190() {
+        render("190-login-claude-dark", dark = true) {
+            SubscriptionLoginCardPreview(
+                login = OAuthLogin(provider = Provider.CLAUDE_SUB, authorizeUrl = "https://claude.ai/oauth", status = "打开授权页后，把授权码粘贴回来"),
+                pastedCode = "",
+            )
+        }
+    }
+
 }

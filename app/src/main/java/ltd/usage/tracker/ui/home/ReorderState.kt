@@ -151,8 +151,8 @@ internal class ReorderState(
 internal fun rememberReorderState(
     ordered: List<StoredAccount>,
     onMove: (Int, Int) -> Unit,
+    listState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
 ): ReorderState {
-    val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val latestOrdered = rememberUpdatedState(ordered)
     val latestOnMove = rememberUpdatedState(onMove)
@@ -163,18 +163,30 @@ internal fun rememberReorderState(
  * 给一行接上长按拖动手势。
  * key 只留 [id]：带上 ordered.size 时列表长度一变（如刷新）就会重建手势，拖到一半被打断。
  */
-internal fun Modifier.reorderable(state: ReorderState, id: String): Modifier = pointerInput(id) {
+internal fun Modifier.reorderable(
+    state: ReorderState,
+    id: String,
+    onPickUp: () -> Unit = {},
+    onPutDown: () -> Unit = {},
+): Modifier = pointerInput(id) {
     var pendingOrdered: List<StoredAccount>? = null
     detectDragGesturesAfterLongPress(
         onDragStart = {
             pendingOrdered = null
+            onPickUp()
             state.start(id)
         },
         onDrag = { change, amount ->
             change.consume()
             pendingOrdered = state.drag(id, amount.y, pendingOrdered)
         },
-        onDragEnd = { state.release(id) },
-        onDragCancel = { state.release(id) },
+        onDragEnd = {
+            onPutDown()
+            state.release(id)
+        },
+        onDragCancel = {
+            onPutDown()
+            state.release(id)
+        },
     )
 }

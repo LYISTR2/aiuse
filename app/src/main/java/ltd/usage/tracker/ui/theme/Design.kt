@@ -3,133 +3,132 @@ package ltd.usage.tracker.ui.theme
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.spring
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import ltd.usage.tracker.R
 
 /**
- * 设计系统 —— 极简单色，支持深/浅两套。
- *
- * 原则：
- *  1. 只有黑、白、灰 + 一个强调色。没有渐变、没有彩色头像、没有装饰性色块。
- *  2. 信息密度优先：紧凑行高、小圆角、少留白。
- *  3. 层次靠字重和字号，不靠颜色和阴影。
- *
- * 两套配色不是简单反色，而是各自调过对比度：
- * 浅色下纯黑文字太硬，用 #111 配 #FAFAFA 背景；分割线要更淡，否则显脏。
+ * 应用色：Material colorScheme 加警告扩展色。
+ * 原先 MonoColors 的角色都映射到方案角色，调用点仍写 Palette.xxx，避免一次改完所有引用。
  */
-data class MonoColors(
+data class AppColors(
     val isDark: Boolean,
-    val Bg: Color,
-    val Surface: Color,
-    val SurfaceHover: Color,
-    val Divider: Color,
-    val TextPrimary: Color,
-    val TextSecondary: Color,
-    val TextTertiary: Color,
-    val Accent: Color,
-    val Positive: Color,
-    val Negative: Color,
-    /** 额度紧张（≥80%）的警示色；≥95% 才升级为 [Negative]，两档让「快用完」和「已见底」能区分。 */
-    val Warning: Color,
-    /** 进度条已用部分的填充色。 */
-    val BarFill: Color,
-    /** 进度条未用部分的底色。 */
-    val Track: Color,
-    /** 红色删除底上的图标色；深浅两套都是白。 */
-    val OnNegative: Color,
-)
+    val scheme: ColorScheme,
+    val warning: WarningColors,
+) {
+    val Bg: Color get() = scheme.background
+    val Surface: Color get() = scheme.surface
+    val SurfaceHover: Color get() = scheme.surfaceContainerHigh
+    val Divider: Color get() = scheme.outlineVariant
+    val TextPrimary: Color get() = scheme.onSurface
+    val TextSecondary: Color get() = scheme.onSurfaceVariant
+    /** 第三级灰用 outline，和 onSurface / onSurfaceVariant 凑齐三级。 */
+    val TextTertiary: Color get() = scheme.outline
+    val Accent: Color get() = scheme.primary
+    val Positive: Color get() = scheme.tertiary
+    val Negative: Color get() = scheme.error
+    val Warning: Color get() = warning.warning
+    val BarFill: Color get() = scheme.primary
+    val Track: Color get() = scheme.surfaceContainerHighest
+    val OnNegative: Color get() = scheme.onError
+    val OnErrorContainer: Color get() = scheme.onErrorContainer
+    val ErrorContainer: Color get() = scheme.errorContainer
+}
 
-val DarkColors = MonoColors(
-    isDark = true,
-    Bg = Color(0xFF0A0A0A),
-    Surface = Color(0xFF121212),
-    SurfaceHover = Color(0xFF1A1A1A),
-    Divider = Color(0xFF232323),
-    TextPrimary = Color(0xFFF5F5F5),
-    // 原 #8A8A8A / #565656 在 #0A0A0A 上对比度不足（三级灰约 2.7:1），提亮到可读
-    TextSecondary = Color(0xFFA3A3A3),
-    TextTertiary = Color(0xFF7A7A7A),
-    Accent = Color(0xFFE8E8E8),
-    Positive = Color(0xFF6EE7A8),
-    Negative = Color(0xFFF87171),
-    Warning = Color(0xFFF5A524),
-    BarFill = Color(0xFFE8E8E8),
-    Track = Color(0xFF232323),
-    OnNegative = Color.White,
-)
+internal val LocalAppColors = staticCompositionLocalOf {
+    AppColors(isDark = true, scheme = VibrantDarkScheme, warning = WarningDark)
+}
 
-val LightColors = MonoColors(
-    isDark = false,
-    Bg = Color(0xFFFAFAFA),
-    Surface = Color(0xFFFFFFFF),
-    SurfaceHover = Color(0xFFF0F0F0),
-    Divider = Color(0xFFE4E4E4),
-    TextPrimary = Color(0xFF111111),
-    // 浅色三级灰 #767676 在纯白卡片上约 4.5:1，是还能当正文读的最浅灰
-    TextSecondary = Color(0xFF525252),
-    TextTertiary = Color(0xFF767676),
-    Accent = Color(0xFF111111),
-    Positive = Color(0xFF12874F),
-    Negative = Color(0xFFC0392B),
-    // 浅色底上亮黄看不清，用压暗的琥珀色
-    Warning = Color(0xFFB7791F),
-    BarFill = Color(0xFF111111),
-    Track = Color(0xFFE4E4E4),
-    OnNegative = Color.White,
-)
+val Palette: AppColors
+    @Composable @ReadOnlyComposable get() = LocalAppColors.current
 
-val LocalMonoColors = staticCompositionLocalOf { DarkColors }
+val ColorScheme.warning: Color
+    @Composable @ReadOnlyComposable get() = LocalAppColors.current.warning.warning
+
+val ColorScheme.onWarning: Color
+    @Composable @ReadOnlyComposable get() = LocalAppColors.current.warning.onWarning
+
+val ColorScheme.warningContainer: Color
+    @Composable @ReadOnlyComposable get() = LocalAppColors.current.warning.warningContainer
+
+val ColorScheme.onWarningContainer: Color
+    @Composable @ReadOnlyComposable get() = LocalAppColors.current.warning.onWarningContainer
 
 /**
- * 当前配色。
- *
- * 声明成 `@Composable` 属性，让调用点保持 `Palette.Bg` 的写法不变，
- * 但实际读取的是 CompositionLocal —— 切换主题时整棵树自动重组。
- */
-val Palette: MonoColors
-    @Composable @ReadOnlyComposable get() = LocalMonoColors.current
-
-/**
- * 排版。
- *
- * 字号阶梯紧凑，靠字重拉开层次：
- *   数字 28sp Bold / 标题 15sp SemiBold / 正文 13sp / 辅助 12sp / 标签 11sp
- *
- * 10sp 对中文笔画太密，只留给金额后的币种单位和分隔符这类纯拉丁短符号；
- * 服务商名、指标标签、说明文字一律不小于 11sp。
+ * 排版尺寸。金额改走 [SummaryNumberStyle] / [CardNumberStyle]；
+ * 其余仍用这些常量，避免一次改完所有中文字号。
  */
 object Type {
     const val DisplaySize = 28f
     const val TitleSize = 15f
     const val BodySize = 13f
     const val CaptionSize = 12f
-    /** 次要中文文字：服务商、指标标签、说明。 */
     const val LabelSize = 11f
-    /** 只用于币种单位和分隔符。 */
     const val MicroSize = 10f
-
-    /** 页面大标题「用量」与 xAI 设备码。 */
     const val HeadlineSize = 22f
-    /** 底部面板 / 弹窗标题。 */
     const val SheetTitleSize = 17f
-    /** 汇总区「暂无数据」占位：比 28sp 数字小得多，一眼看出不是数据。 */
     const val PlaceholderSize = 18f
-    /** 多行说明的行高：辅助字号 12sp 配 18，标签字号 11sp 配 15。 */
     const val CaptionLineHeight = 18f
     const val LabelLineHeight = 15f
 }
 
-/** 金额、百分比统一用等宽数字：刷新时位数不变的数字不会左右跳。 */
-val NumberStyle = TextStyle(fontFeatureSettings = "tnum")
+/**
+ * Roboto Flex 可变字体，只用于数字，中文仍走系统 Noto Sans CJK。
+ * Compose 1.13 把 fontVariationSettings 从 TextStyle 挪到了 Font 上，
+ * 所以不同字重/宽度要做成不同的 FontFamily，不能靠 TextStyle.copy。
+ */
+private fun robotoFlexFamily(weight: Int, width: Float = 100f): FontFamily = FontFamily(
+    Font(
+        resId = R.font.roboto_flex,
+        weight = FontWeight(weight),
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(weight),
+            FontVariation.width(width),
+        ),
+    ),
+)
+
+val RobotoFlexFamily: FontFamily = robotoFlexFamily(400)
+
+/** 等宽数字，避免刷新时位数跳动。 */
+val NumberStyle = TextStyle(
+    fontFamily = RobotoFlexFamily,
+    fontFeatureSettings = "tnum",
+)
+
+/** 汇总金额：displayLarge 57sp / wght 650 / wdth 112。 */
+val SummaryNumberStyle = TextStyle(
+    fontFamily = robotoFlexFamily(650, 112f),
+    fontFeatureSettings = "tnum",
+    fontSize = 57.sp,
+    fontWeight = FontWeight(650),
+    letterSpacing = (-0.8).sp,
+)
+
+/** 卡片金额：titleLarge 22sp / wght 600。 */
+val CardNumberStyle = TextStyle(
+    fontFamily = robotoFlexFamily(600),
+    fontFeatureSettings = "tnum",
+    fontSize = 22.sp,
+    fontWeight = FontWeight(600),
+    letterSpacing = (-0.2).sp,
+)
 
 /**
  * 动效 —— 取自 Material 3 Expressive 官方规范。
  *
- * 极简风格下动效要短、要快、不要弹：
- * 位移用 Spatial fast（damping 0.6 / stiffness 800），淡入用 Effects fast（1.0 / 3800）。
+ * 令牌数值保持不变：位移用 Spatial fast（damping 0.6 / stiffness 800），
+ * 淡入用 Effects fast（1.0 / 3800）。全局另有 MotionScheme.expressive()。
  */
 object Motion {
     fun <T> spatialFast(): FiniteAnimationSpec<T> =
@@ -145,4 +144,23 @@ object Motion {
         spring(dampingRatio = 1.0f, stiffness = 1600f)
 
     val Emphasized = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+}
+
+/** 额度语义档：阈值写在这里，UI 和测试共用，避免两处各写一遍。 */
+enum class UsageLevel { NORMAL, WARNING, CRITICAL }
+
+fun usageLevel(fraction: Float): UsageLevel = when {
+    fraction >= 0.95f -> UsageLevel.CRITICAL
+    fraction >= 0.80f -> UsageLevel.WARNING
+    else -> UsageLevel.NORMAL
+}
+
+@Composable
+fun usageBarColor(fraction: Float): Color {
+    val scheme = MaterialTheme.colorScheme
+    return when (usageLevel(fraction)) {
+        UsageLevel.CRITICAL -> scheme.error
+        UsageLevel.WARNING -> scheme.warning
+        UsageLevel.NORMAL -> scheme.primary
+    }
 }

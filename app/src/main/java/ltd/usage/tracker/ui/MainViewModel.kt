@@ -65,6 +65,8 @@ data class UiState(
     val sortMode: SortMode = SortMode.MANUAL,
     /** Claude / ChatGPT 订阅登录进行中（1.8.0）；与 [xaiLogin] 互斥。 */
     val oauthLogin: OAuthLogin? = null,
+    /** 是否用系统动态取色；Android 12 以下会被主题层忽略。默认开。 */
+    val dynamicColor: Boolean = true,
 )
 
 /**
@@ -130,6 +132,7 @@ class MainViewModel internal constructor(
             dark = s["dark"]?.toBooleanStrictOrNull() ?: true,
             displayCurrency = s["displayCurrency"]?.takeIf { it == "USD" || it == "CNY" } ?: "USD",
             sortMode = SortMode.from(s["sortMode"]),
+            dynamicColor = s["dynamicColor"]?.toBooleanStrictOrNull() ?: true,
         )
         reload()
         refreshFx()
@@ -164,6 +167,11 @@ class MainViewModel internal constructor(
         if (currency != "USD" && currency != "CNY") return
         _state.value = _state.value.copy(displayCurrency = currency)
         savePref("displayCurrency", currency)
+    }
+
+    fun setDynamicColor(enabled: Boolean) {
+        _state.value = _state.value.copy(dynamicColor = enabled)
+        savePref("dynamicColor", enabled.toString())
     }
 
     /**

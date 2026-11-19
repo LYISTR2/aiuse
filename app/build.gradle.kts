@@ -7,14 +7,18 @@ plugins {
 
 android {
     namespace = "ltd.usage.tracker"
-    compileSdk = 35
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 1
+        }
+    }
 
     defaultConfig {
         applicationId = "ltd.usage.tracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 16
-        versionName = "1.8.3"
+        versionCode = 18
+        versionName = "1.9.1"
     }
 
     buildTypes {
@@ -29,10 +33,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
     }
@@ -42,11 +42,26 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    // 稳定 BOM 最新仅到 2026.09.00（material3 1.4.0）；1.5.0 稳定版尚未上 Maven，故用 compose-bom-alpha:2026.11.00（material3 1.5.0-rc01），才能用到 Expressive 组件
+    val composeBom = platform("androidx.compose:compose-bom-alpha:2026.11.00")
     implementation(composeBom)
+    testImplementation(composeBom)
+    androidTestImplementation(composeBom)
 
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
@@ -70,18 +85,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     testImplementation("junit:junit:4.13.2")
-}
-
-android {
-    testOptions {
-        unitTests {
-            isIncludeAndroidResources = true
-        }
-    }
-}
-
-dependencies {
     testImplementation("org.robolectric:robolectric:4.14.1")
-    testImplementation("androidx.compose.ui:ui-test-junit4:1.7.6")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.7.6")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

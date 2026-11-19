@@ -1,24 +1,54 @@
 package ltd.usage.tracker.ui.add
 
-import androidx.compose.runtime.*
-import androidx.compose.material3.*
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.toShape
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ltd.usage.tracker.data.Provider
-import ltd.usage.tracker.ui.theme.Palette
 import ltd.usage.tracker.ui.theme.Type
-
-// ---------------------------------------------------------------- 添加
+import ltd.usage.tracker.ui.theme.providerLetter
+import ltd.usage.tracker.ui.theme.providerPolygon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,31 +56,22 @@ internal fun AddAccountSheet(
     onDismiss: () -> Unit,
     onConfirm: (Provider, String, String) -> Unit,
     onXaiLogin: () -> Unit,
-    /** 1.8.0：Anthropic / OpenAI 选「登录订阅」后点登录；参数是 ANTHROPIC 或 OPENAI。 */
     onSubscriptionLogin: (Provider) -> Unit = {},
 ) {
+    val scheme = MaterialTheme.colorScheme
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Palette.Surface,
-        dragHandle = {
-            Box(
-                Modifier
-                    .padding(vertical = 10.dp)
-                    .size(width = 32.dp, height = 3.dp)
-                    .clip(CircleShape)
-                    .background(Palette.Divider)
-            )
-        },
+        containerColor = scheme.surface,
     ) {
         AddAccountForm(onDismiss, onConfirm, onXaiLogin, onSubscriptionLogin)
     }
 }
 
 /**
- * 表单正文。1.8.0 从 [AddAccountSheet] 里原样拆出：底部弹层在独立 Window 上，截图抓不到，
- * 截图时直接画这一段；[initialProvider] / [initialMethod] 只给截图用。
+ * 表单正文。底部弹层在独立 Window 上，截图抓不到，截图时直接画这一段；
+ * [initialProvider] / [initialMethod] 只给截图用。
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun AddAccountForm(
     onDismiss: () -> Unit,
@@ -63,63 +84,56 @@ internal fun AddAccountForm(
     var provider by remember { mutableStateOf(initialProvider) }
     var name by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
-    var expanded by remember { mutableStateOf(false) }
     var method by remember { mutableStateOf(initialMethod) }
     val subscription = subscriptionLoginOf(provider)
-    // 只有支持订阅登录的服务商才看 method；切到其他服务商一律是 API Key
     val loginMode = subscription != null && method == AddMethod.SUBSCRIPTION
+    val scheme = MaterialTheme.colorScheme
+    val pickable = remember { Provider.entries.filter { it.pickable } }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
             .padding(bottom = 28.dp),
     ) {
         Text(
             "添加服务",
-            fontSize = Type.SheetTitleSize.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Palette.TextPrimary,
+            style = MaterialTheme.typography.titleLargeEmphasized,
+            color = scheme.onSurface,
         )
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(16.dp))
 
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-            OutlinedTextField(
-                value = provider.displayName,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("服务商", fontSize = Type.CaptionSize.sp) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                modifier = Modifier
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                    .fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                colors = fieldColors(),
-            )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                // 订阅账号（CLAUDE_SUB / CHATGPT_SUB）不单独列出，从 Anthropic / OpenAI 的「登录订阅」进入
-                Provider.entries.filter { it.pickable }.forEach { p ->
-                    DropdownMenuItem(
-                        text = { Text(p.displayName, fontSize = Type.BodySize.sp) },
-                        onClick = { provider = p; expanded = false },
+        pickable.chunked(2).forEach { row ->
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                row.forEach { p ->
+                    ProviderTile(
+                        provider = p,
+                        selected = p == provider,
+                        onClick = { provider = p },
+                        modifier = Modifier.weight(1f),
                     )
                 }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
             label = { Text("备注名（可选）", fontSize = Type.CaptionSize.sp) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = fieldColors(),
         )
 
         if (subscription != null) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             MethodChoice(method = method, onChange = { method = it })
         }
 
@@ -127,39 +141,24 @@ internal fun AddAccountForm(
         if (loginMode) {
             Button(
                 onClick = { onSubscriptionLogin(provider) },
-                modifier = Modifier.fillMaxWidth().height(44.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Palette.TextPrimary,
-                    contentColor = Palette.Bg,
-                ),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
             ) {
-                Text(subscription!!.button, fontSize = Type.BodySize.sp, fontWeight = FontWeight.Medium)
+                Text(subscription!!.button, fontWeight = FontWeight.Medium)
             }
             Spacer(Modifier.height(8.dp))
-            Text(
-                subscription.hint,
-                fontSize = Type.LabelSize.sp,
-                color = Palette.TextTertiary,
-                lineHeight = Type.LabelLineHeight.sp,
-            )
+            Text(subscription.hint, fontSize = Type.LabelSize.sp, color = scheme.outline, lineHeight = Type.LabelLineHeight.sp)
         } else if (provider == Provider.XAI) {
             Button(
                 onClick = onXaiLogin,
-                modifier = Modifier.fillMaxWidth().height(44.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Palette.TextPrimary,
-                    contentColor = Palette.Bg,
-                ),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
             ) {
-                Text("用浏览器登录 Grok", fontSize = Type.BodySize.sp, fontWeight = FontWeight.Medium)
+                Text("用浏览器登录 Grok", fontWeight = FontWeight.Medium)
             }
             Spacer(Modifier.height(8.dp))
             Text(
                 "会打开 accounts.x.ai，输入设备码授权。无需 API Key。",
                 fontSize = Type.LabelSize.sp,
-                color = Palette.TextTertiary,
+                color = scheme.outline,
                 lineHeight = Type.LabelLineHeight.sp,
             )
         } else {
@@ -170,7 +169,7 @@ internal fun AddAccountForm(
                 singleLine = true,
                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = fieldColors(),
             )
         }
@@ -180,52 +179,79 @@ internal fun AddAccountForm(
             if (loginMode) "登录令牌用 AndroidKeyStore 加密后存在本机，不上传。"
             else "Key 用 AndroidKeyStore 加密后存在本机，不上传。",
             fontSize = Type.LabelSize.sp,
-            color = Palette.TextTertiary,
+            color = scheme.outline,
             lineHeight = Type.LabelLineHeight.sp,
         )
 
         Spacer(Modifier.height(20.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(10.dp),
-            ) { Text("取消", color = Palette.TextSecondary, fontSize = Type.BodySize.sp) }
+            TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                Text("取消")
+            }
             if (provider != Provider.XAI && !loginMode) {
                 Button(
                     onClick = { onConfirm(provider, name, token) },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Palette.TextPrimary,
-                        contentColor = Palette.Bg,
-                    ),
-                ) { Text("添加", fontSize = Type.BodySize.sp, fontWeight = FontWeight.Medium) }
+                ) { Text("添加", fontWeight = FontWeight.Medium) }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = Palette.TextSecondary,
-    unfocusedBorderColor = Palette.Divider,
-    focusedTextColor = Palette.TextPrimary,
-    unfocusedTextColor = Palette.TextPrimary,
-    focusedLabelColor = Palette.TextSecondary,
-    unfocusedLabelColor = Palette.TextTertiary,
-    cursorColor = Palette.TextPrimary,
-)
+private fun ProviderTile(
+    provider: Provider,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        modifier
+            .clip(shape)
+            .background(if (selected) scheme.secondaryContainer else scheme.surfaceContainer)
+            .then(
+                if (selected) Modifier.border(2.dp, scheme.primary, shape)
+                else Modifier
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(40.dp)
+                .clip(providerPolygon(provider.id).toShape())
+                .background(if (selected) scheme.primary else scheme.secondaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                providerLetter(provider.displayName, provider.displayName),
+                style = MaterialTheme.typography.titleMediumEmphasized,
+                color = if (selected) scheme.onPrimary else scheme.onSecondaryContainer,
+            )
+        }
+        Spacer(Modifier.size(8.dp))
+        Text(
+            provider.displayName,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (selected) scheme.onSecondaryContainer else scheme.onSurface,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
 
-// ---------------------------------------------------------------- 添加方式（1.8.0）
+@Composable
+private fun fieldColors() = OutlinedTextFieldDefaults.colors()
 
-/** 添加方式：订阅登录或 API Key。 */
 internal enum class AddMethod { SUBSCRIPTION, API_KEY }
 
-/** 支持订阅登录的服务商的入口文案。 */
 internal data class SubscriptionEntry(val button: String, val hint: String)
 
-/** Anthropic → Claude 订阅（粘贴授权码），OpenAI → ChatGPT 订阅（设备码）；其他服务商没有订阅登录。 */
 internal fun subscriptionLoginOf(provider: Provider): SubscriptionEntry? = when (provider) {
     Provider.ANTHROPIC -> SubscriptionEntry(
         button = "用浏览器登录 Claude",
@@ -238,35 +264,40 @@ internal fun subscriptionLoginOf(provider: Provider): SubscriptionEntry? = when 
     else -> null
 }
 
-/** 「登录订阅 / API Key」二选一；样式跟随现有黑白按钮，不引入新组件库。 */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun MethodChoice(method: AddMethod, onChange: (AddMethod) -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(Palette.SurfaceHover)
-            .padding(3.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        listOf(AddMethod.SUBSCRIPTION to "登录订阅", AddMethod.API_KEY to "API Key").forEach { (m, label) ->
-            val selected = m == method
-            Box(
-                Modifier
-                    .weight(1f)
-                    .height(34.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (selected) Palette.Surface else androidx.compose.ui.graphics.Color.Transparent)
-                    .selectable(selected = selected, role = Role.Tab, onClick = { onChange(m) }),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    label,
-                    fontSize = Type.CaptionSize.sp,
-                    fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-                    color = if (selected) Palette.TextPrimary else Palette.TextTertiary,
-                )
-            }
+    val options = listOf(AddMethod.SUBSCRIPTION to "登录订阅", AddMethod.API_KEY to "API Key")
+    ButtonGroup(overflowIndicator = {}) {
+        options.forEachIndexed { index, (m, label) ->
+            customItem(
+                buttonGroupContent = {
+                    val interaction = remember { MutableInteractionSource() }
+                    val shapes = if (index == 0) {
+                        ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    } else {
+                        ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    }
+                    ToggleButton(
+                        checked = m == method,
+                        onCheckedChange = { onChange(m) },
+                        shapes = shapes,
+                        interactionSource = interaction,
+                        modifier = Modifier
+                            .animateWidth(interaction)
+                            .weight(1f)
+                            .semantics { role = Role.Tab },
+                    ) { Text(label) }
+                },
+                menuContent = {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(label) },
+                        onClick = {
+                            onChange(m)
+                        },
+                    )
+                },
+            )
         }
     }
 }

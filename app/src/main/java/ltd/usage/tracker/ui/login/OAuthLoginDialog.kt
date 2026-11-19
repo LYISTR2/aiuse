@@ -2,6 +2,7 @@ package ltd.usage.tracker.ui.login
 
 import androidx.compose.runtime.*
 import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,7 +46,7 @@ internal fun OAuthLoginDialog(
     AlertDialog(
         onDismissRequest = onCancel,
         containerColor = Palette.Surface,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(28.dp),
         properties = DialogProperties(dismissOnClickOutside = dismissOnOutside),
         title = {
             Text(title, fontSize = Type.SheetTitleSize.sp, fontWeight = FontWeight.SemiBold, color = Palette.TextPrimary)
@@ -70,7 +71,7 @@ internal fun OAuthLoginCardPreview(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(28.dp))
                 .background(Palette.Surface)
                 .padding(20.dp),
         ) {
@@ -120,17 +121,20 @@ internal fun DeviceCodeBody(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(Palette.SurfaceHover)
-                .padding(vertical = 14.dp),
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.secondaryContainer)
+                .padding(vertical = 16.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 userCode,
-                fontSize = Type.HeadlineSize.sp,
-                fontWeight = FontWeight.Bold,
-                color = Palette.TextPrimary,
-                letterSpacing = 3.sp,
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontFamily = ltd.usage.tracker.ui.theme.RobotoFlexFamily,
+                    fontFeatureSettings = "tnum",
+                    letterSpacing = 3.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
         }
 
@@ -265,14 +269,10 @@ internal fun SubmitCodeButton(enabled: Boolean, onClick: () -> Unit) {
  * 12dp 时不确定进度的弧段很短，又没有底环，看上去像被裁掉的半个括号；
  * 改为 14dp 并画一圈分割线色的底环，任何时刻都能看出是完整的圆。
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun WaitingSpinner() {
-    CircularProgressIndicator(
-        modifier = Modifier.size(14.dp),
-        strokeWidth = 1.5.dp,
-        color = Palette.TextTertiary,
-        trackColor = Palette.Divider,
-    )
+    androidx.compose.material3.LoadingIndicator(modifier = Modifier.size(20.dp))
 }
 
 // ---------------------------------------------------------------- 订阅登录（Claude / ChatGPT）
