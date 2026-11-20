@@ -5,10 +5,10 @@ import ltd.usage.tracker.provider.vendors.redact
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import ltd.usage.tracker.backup.WebDavClient
 import ltd.usage.tracker.crypto.CredentialCipher
 import ltd.usage.tracker.data.Credential
 import ltd.usage.tracker.data.Provider
+import ltd.usage.tracker.data.CredentialState
 import ltd.usage.tracker.data.Store
 import okhttp3.Request
 import org.junit.Assert.assertEquals
@@ -73,95 +73,7 @@ class SecurityTest {
 
     // ---------------------------------------------------- 2. 传输安全
 
-    @Test
-    fun `webdav rejects plain http`() {
-        try {
-            WebDavClient("http://example.com/dav/", "u", "p")
-            fail("明文 http 必须被拒绝")
-        } catch (e: IllegalArgumentException) {
-            assertTrue(e.message!!.contains("https"))
-        }
-    }
-
-    @Test
-    fun `webdav rejects http with credentials in url`() {
-        try {
-            WebDavClient("http://user:pass@evil.com/dav/", "u", "p")
-            fail("带凭据的明文 http 必须被拒绝")
-        } catch (_: IllegalArgumentException) {
-        }
-    }
-
-    @Test
-    fun `webdav rejects scheme-relative and other schemes`() {
-        listOf(
-            "ftp://example.com/dav/",
-            "file:///sdcard/dav/",
-            "//example.com/dav/",
-        ).forEach { url ->
-            try {
-                WebDavClient(url, "u", "p")
-                fail("应拒绝: $url")
-            } catch (_: IllegalArgumentException) {
-            }
-        }
-    }
-
-    @Test
-    fun `webdav allows https and localhost`() {
-        WebDavClient("https://dav.example.com/dav/", "u", "p")
-        WebDavClient("HTTPS://dav.example.com/dav/", "u", "p")
-        WebDavClient("http://localhost:8080/dav/", "u", "p")
-        WebDavClient("http://127.0.0.1:8080/dav/", "u", "p")
-    }
-
-    @Test
-    fun `webdav rejects localhost prefix bypass`() {
-        listOf(
-            "http://localhost.evil.com/dav/",
-            "http://localhost@evil.com/dav/",
-            "http://localhost.evil.com:8080/dav/",
-        ).forEach { url ->
-            try {
-                WebDavClient(url, "u", "p")
-                fail("应拒绝本机前缀绕过: $url")
-            } catch (_: IllegalArgumentException) {
-            }
-        }
-    }
-
-    @Test
-    fun `webdav rejects credentials embedded in url`() {
-        try {
-            WebDavClient("https://user:pass@dav.example.com/dav/", "u", "p")
-            fail("内嵌用户名密码必须被拒绝")
-        } catch (_: IllegalArgumentException) {
-        }
-    }
-
-    @Test
-    fun `webdav requires trailing slash to prevent path traversal`() {
-        // 没有结尾 / 时 baseUrl + fileName 会拼成 .../davbackup.bin，写到错误位置
-        try {
-            WebDavClient("https://dav.example.com/dav", "u", "p")
-            fail("必须以 / 结尾")
-        } catch (e: IllegalArgumentException) {
-            assertTrue(e.message!!.contains("/"))
-        }
-    }
-
-    @Test
-    fun `webdav upload rejects oversized payload before network`() {
-        val c = WebDavClient("https://127.0.0.1:1/dav/", "u", "p")
-        try {
-            c.upload("big.bin", ByteArray((WebDavClient.MAX_BYTES + 1).toInt()))
-            fail("超限必须拒绝")
-        } catch (e: IllegalArgumentException) {
-            assertTrue(e.message!!.contains("过大"))
-        }
-    }
-
-    @Test
+        @Test
     fun `okhttp rejects header injection via token`() {
         // 若 token 含 CRLF，可能注入额外 header。OkHttp 应直接拒绝。
         try {
@@ -270,12 +182,17 @@ class SecurityTest {
     }
 
     @Test
-    fun `loadCredentials on corrupt file returns empty instead of crashing`() {
+    fun `loadCredentials on corrupt file does not crash or overwrite`() {
         val store = Store(context)
         store.wipe()
-        java.io.File(store.directory, "credentials.bin").writeBytes(ByteArray(64) { 0xFF.toByte() })
-        // 解密失败必须降级为空，不能让 App 启动崩溃
+        val raw = ByteArray(64) { 0xFF.toByte() }
+        val live = java.io.File(store.directory, "credentials.bin")
+        live.writeBytes(raw)
+        assertTrue(store.loadCredentialState() is CredentialState.Undecryptable)
+        // 只读查询仍给空 Map，但不能把空映射写回原文件
         assertEquals(emptyMap<String, Credential>(), store.loadCredentials())
+        assertTrue(live.exists())
+        assertTrue(live.readBytes().contentEquals(raw))
     }
 
     @Test

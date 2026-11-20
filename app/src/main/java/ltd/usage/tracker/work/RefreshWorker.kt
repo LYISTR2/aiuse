@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import ltd.usage.tracker.UsageApp
+import ltd.usage.tracker.data.CredentialState
 import ltd.usage.tracker.data.UsageSync
 
 /**
@@ -26,6 +27,10 @@ class RefreshWorker(
 
     override suspend fun doWork(): Result {
         val app = applicationContext as? UsageApp ?: return Result.success()
+        // 解密失败只记下状态（load 时已备份），不重试、不写文件
+        if (app.store.loadCredentialState() is CredentialState.Undecryptable) {
+            return Result.success()
+        }
         return runCatching {
             UsageSync.refreshAll(app.store)
             Result.success()

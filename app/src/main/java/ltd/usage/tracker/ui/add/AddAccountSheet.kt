@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ltd.usage.tracker.data.Provider
+import ltd.usage.tracker.data.StoredAccount
 import ltd.usage.tracker.ui.theme.ProviderMarkBadge
 import ltd.usage.tracker.ui.theme.Type
 
@@ -56,13 +57,18 @@ internal fun AddAccountSheet(
     onConfirm: (Provider, String, String) -> Unit,
     onXaiLogin: () -> Unit,
     onSubscriptionLogin: (Provider) -> Unit = {},
+    relogin: StoredAccount? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = scheme.surface,
     ) {
-        AddAccountForm(onDismiss, onConfirm, onXaiLogin, onSubscriptionLogin)
+        AddAccountForm(
+            onDismiss, onConfirm, onXaiLogin, onSubscriptionLogin,
+            initialProvider = Provider.from(relogin?.providerId ?: "") ?: Provider.DEEPSEEK,
+            relogin = relogin,
+        )
     }
 }
 
@@ -79,11 +85,13 @@ internal fun AddAccountForm(
     onSubscriptionLogin: (Provider) -> Unit,
     initialProvider: Provider = Provider.DEEPSEEK,
     initialMethod: AddMethod = AddMethod.API_KEY,
+    relogin: StoredAccount? = null,
 ) {
     var provider by remember { mutableStateOf(initialProvider) }
-    var name by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(relogin?.name ?: "") }
     var token by remember { mutableStateOf("") }
     var method by remember { mutableStateOf(initialMethod) }
+    val reloginMode = relogin != null
     val subscription = subscriptionLoginOf(provider)
     val loginMode = subscription != null && method == AddMethod.SUBSCRIPTION
     val scheme = MaterialTheme.colorScheme
@@ -97,13 +105,13 @@ internal fun AddAccountForm(
             .padding(bottom = 28.dp),
     ) {
         Text(
-            "添加服务",
+            if (reloginMode) "重新填写 API Key" else "添加服务",
             style = MaterialTheme.typography.titleLargeEmphasized,
             color = scheme.onSurface,
         )
         Spacer(Modifier.height(16.dp))
 
-        pickable.chunked(2).forEach { row ->
+        if (!reloginMode) pickable.chunked(2).forEach { row ->
             Row(
                 Modifier.fillMaxWidth().padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -131,7 +139,7 @@ internal fun AddAccountForm(
             colors = fieldColors(),
         )
 
-        if (subscription != null) {
+        if (!reloginMode && subscription != null) {
             Spacer(Modifier.height(12.dp))
             MethodChoice(method = method, onChange = { method = it })
         }
@@ -191,7 +199,7 @@ internal fun AddAccountForm(
                 Button(
                     onClick = { onConfirm(provider, name, token) },
                     modifier = Modifier.weight(1f),
-                ) { Text("添加", fontWeight = FontWeight.Medium) }
+                ) { Text(if (reloginMode) "保存" else "添加", fontWeight = FontWeight.Medium) }
             }
         }
     }

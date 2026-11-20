@@ -118,6 +118,8 @@ internal fun AccountRow(
     index: Int = 0,
     count: Int = 1,
     refreshing: Boolean = false,
+    needsRelogin: Boolean = false,
+    onRelogin: () -> Unit = {},
 ) {
     val provider = Provider.from(account.providerId)
     val interaction = remember { MutableInteractionSource() }
@@ -197,7 +199,9 @@ internal fun AccountRow(
                             )
                         }
                     }
-                    .clickable(interactionSource = interaction, indication = null) {},
+                    .clickable(interactionSource = interaction, indication = null) {
+                        if (needsRelogin) onRelogin()
+                    },
                 shape = shape,
                 color = bg,
                 tonalElevation = elevation,
@@ -210,6 +214,7 @@ internal fun AccountRow(
                     displayCurrency = displayCurrency,
                     refreshing = refreshing,
                     reduceMotion = reduceMotion,
+                    needsRelogin = needsRelogin,
                 )
             }
         }
@@ -229,8 +234,9 @@ private fun AccountRowContent(
     displayCurrency: String,
     refreshing: Boolean,
     reduceMotion: Boolean,
+    needsRelogin: Boolean = false,
 ) {
-    val failed = snapshot?.error != null
+    val failed = snapshot?.error != null || needsRelogin
     val headline = singleHeadlineMetric(snapshot)
     val headlineCaption = headline?.let { metricCaption(it) }
     val scheme = MaterialTheme.colorScheme
@@ -248,9 +254,13 @@ private fun AccountRowContent(
                     overflow = TextOverflow.Ellipsis,
                 )
                 val providerLabel = providerLabelOrNull(account.name, providerName)
-                val detail = snapshot?.error?.let { humanizeError(it) }
-                    ?: snapshot?.note?.let { humanizeNote(it) }
-                        ?.takeUnless { headlineCaption != null && isSameText(it, headlineCaption) }
+                val detail = if (needsRelogin) {
+                    "需要重新登录"
+                } else {
+                    snapshot?.error?.let { humanizeError(it) }
+                        ?: snapshot?.note?.let { humanizeNote(it) }
+                            ?.takeUnless { headlineCaption != null && isSameText(it, headlineCaption) }
+                }
                 if (providerLabel != null || detail != null) {
                     Spacer(Modifier.height(2.dp))
                     Text(

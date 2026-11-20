@@ -41,4 +41,13 @@ class ManifestSecurityTest {
         assertTrue(services.isNullOrEmpty() || services.none { it.exported && it.name.startsWith("ltd.usage.tracker") })
         assertTrue(providers.isNullOrEmpty() || providers.none { it.exported && it.name.startsWith("ltd.usage.tracker") })
     }
+
+    @Test
+    fun networkSecurityConfigHasNoCleartextExceptions() {
+        val xml = java.io.File("src/main/res/xml/network_security_config.xml").readText()
+        assertFalse(xml.contains("cleartextTrafficPermitted=\"true\""))
+        assertFalse(xml.contains("<domain-config"))
+        assertTrue(xml.contains("cleartextTrafficPermitted=\"false\""))
+    }
+
 }

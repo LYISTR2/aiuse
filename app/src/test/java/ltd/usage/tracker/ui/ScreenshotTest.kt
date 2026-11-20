@@ -706,4 +706,64 @@ class ScreenshotTest {
             )
         }
     }
+
+    @Test
+    fun homeDark196DecryptError() {
+        val (accounts, snapshots) = sampleHomeState()
+        render("196-home-dark", dark = true) {
+            UsageHome(
+                state = UiState(
+                    accounts = accounts,
+                    snapshots = snapshots,
+                    displayCurrency = "USD",
+                    fxLive = true,
+                    dynamicColor = false,
+                    credentialsUndecryptable = true,
+                    accountsNeedingRelogin = accounts.map { it.id }.toSet(),
+                ),
+                latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                onRefresh = {},
+                onAdd = {},
+                onToggleTheme = {},
+                onSortModeChange = {},
+                onDynamicColorChange = {},
+                onDelete = {},
+                onCurrencyChange = {},
+                onMove = { _, _ -> },
+                snackbar = remember { SnackbarHostState() },
+                dynamicColorAvailable = false,
+            )
+        }
+    }
+
+    @Test
+    fun homeLight196DecryptError() {
+        val (accounts, snapshots) = sampleHomeState()
+        render("196-home-light", dark = false) {
+            UsageHome(
+                state = UiState(
+                    accounts = accounts,
+                    snapshots = snapshots,
+                    displayCurrency = "USD",
+                    fxLive = true,
+                    dark = false,
+                    dynamicColor = false,
+                    credentialsUndecryptable = true,
+                    accountsNeedingRelogin = accounts.map { it.id }.toSet(),
+                ),
+                latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                onRefresh = {},
+                onAdd = {},
+                onToggleTheme = {},
+                onSortModeChange = {},
+                onDynamicColorChange = {},
+                onDelete = {},
+                onCurrencyChange = {},
+                onMove = { _, _ -> },
+                snackbar = remember { SnackbarHostState() },
+                dynamicColorAvailable = false,
+            )
+        }
+    }
+
 }

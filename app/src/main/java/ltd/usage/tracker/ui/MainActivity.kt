@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ltd.usage.tracker.data.Provider
+import ltd.usage.tracker.data.StoredAccount
 import ltd.usage.tracker.ui.add.AddAccountSheet
 import ltd.usage.tracker.ui.home.UsageHome
 import ltd.usage.tracker.ui.login.SubscriptionLoginDialog
@@ -44,6 +45,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppScreen(vm: MainViewModel = viewModel(), state: UiState = vm.state.collectAsState().value) {
     var showAdd by remember { mutableStateOf(false) }
+    var reloginAccount by remember { mutableStateOf<StoredAccount?>(null) }
     val snackbar = remember { SnackbarHostState() }
     val deletes = rememberUndoableDeletes(snackbar) { id -> vm.removeAccount(id) }
     LaunchedEffect(state.accounts) { deletes.prune(state.accounts) }
@@ -67,6 +69,14 @@ fun AppScreen(vm: MainViewModel = viewModel(), state: UiState = vm.state.collect
         onDynamicColorChange = { vm.setDynamicColor(it) },
         onDelete = { id -> deletes.request(id, state.accounts) },
         onCurrencyChange = { vm.setDisplayCurrency(it) },
+        onRelogin = { account ->
+            when (Provider.from(account.providerId)) {
+                Provider.XAI -> vm.loginXai(replaceAccountId = account.id)
+                Provider.CLAUDE_SUB -> vm.loginClaude(replaceAccountId = account.id)
+                Provider.CHATGPT_SUB -> vm.loginChatGpt(replaceAccountId = account.id)
+                else -> reloginAccount = account
+            }
+        },
         onMove = { from, to ->
             val shown = visibleState.accounts
             if (shown.size == state.accounts.size) {
@@ -93,21 +103,28 @@ fun AppScreen(vm: MainViewModel = viewModel(), state: UiState = vm.state.collect
         )
     }
 
-    if (showAdd) {
+    if (showAdd || reloginAccount != null) {
+        val editing = reloginAccount
         AddAccountSheet(
-            onDismiss = { showAdd = false },
-            onConfirm = { p, n, t ->
-                vm.addAccount(p, n, t)
+            onDismiss = { showAdd = false; reloginAccount = null },
+            onConfirm = { p, n, token ->
+                if (editing != null) vm.updateAccountToken(editing.id, token)
+                else vm.addAccount(p, n, token)
                 showAdd = false
+                reloginAccount = null
             },
             onXaiLogin = {
                 showAdd = false
-                vm.loginXai()
+                reloginAccount = null
+                vm.loginXai(replaceAccountId = editing?.id)
             },
             onSubscriptionLogin = { p ->
                 showAdd = false
-                if (p == Provider.ANTHROPIC) vm.loginClaude() else vm.loginChatGpt()
+                reloginAccount = null
+                val id = editing?.id
+                if (p == Provider.ANTHROPIC) vm.loginClaude(replaceAccountId = id) else vm.loginChatGpt(replaceAccountId = id)
             },
+            relogin = editing,
         )
     }
 }

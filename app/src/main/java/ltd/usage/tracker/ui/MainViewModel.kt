@@ -67,6 +67,10 @@ data class UiState(
     val oauthLogin: OAuthLogin? = null,
     /** 是否用系统动态取色；Android 12 以下会被主题层忽略。默认开。 */
     val dynamicColor: Boolean = true,
+    /** 本机 credentials.bin 存在但解不开。 */
+    val credentialsUndecryptable: Boolean = false,
+    /** 没有可用凭据、需要重新登录或填写 Key 的账号 id。 */
+    val accountsNeedingRelogin: Set<String> = emptySet(),
 )
 
 /**
@@ -202,12 +206,21 @@ class MainViewModel internal constructor(
 
     fun reload() {
         viewModelScope.launch {
-            val (accounts, snapshots) = withContext(Dispatchers.IO) {
-                store.loadAccounts() to store.loadSnapshots()
+            val (accounts, snapshots, credState) = withContext(Dispatchers.IO) {
+                Triple(store.loadAccounts(), store.loadSnapshots(), store.loadCredentialState())
+            }
+            val missing = when (credState) {
+                is ltd.usage.tracker.data.CredentialState.Available ->
+                    accounts.map { it.id }.filter { it !in credState.credentials }.toSet()
+                is ltd.usage.tracker.data.CredentialState.Missing,
+                is ltd.usage.tracker.data.CredentialState.Undecryptable ->
+                    accounts.map { it.id }.toSet()
             }
             _state.value = _state.value.copy(
                 accounts = accounts,
                 snapshots = snapshots,
+                credentialsUndecryptable = credState is ltd.usage.tracker.data.CredentialState.Undecryptable,
+                accountsNeedingRelogin = missing,
             )
         }
     }
@@ -232,6 +245,8 @@ class MainViewModel internal constructor(
      * 持有与刷新相同的凭据锁：刷新换 token 写回与这里的「读 → 加一条 → 写」不会互相覆盖。
      * [beforeWrite] 在拿到锁之后、写入之前执行，登录流程用它做最后一次「是否已取消」检查。
      */
+    private var replaceAccountId: String? = null
+
     private suspend fun saveNewAccount(
         provider: Provider,
         name: String,
@@ -240,15 +255,45 @@ class MainViewModel internal constructor(
     ) = UsageSync.withCredentialsLock {
         beforeWrite()
         val now = System.currentTimeMillis()
-        val account = StoredAccount(
-            id = "a-" + java.util.UUID.randomUUID().toString().take(8),
-            providerId = provider.id,
-            name = name,
-            createdAt = now,
-            updatedAt = now,
-        )
-        store.saveAccounts(store.loadAccounts() + account)
-        store.saveCredentials(store.loadCredentials() + (account.id to credential(now)))
+        val accounts = store.loadAccounts()
+        val existingId = replaceAccountId
+        val existing = existingId?.let { id -> accounts.firstOrNull { it.id == id } }
+        if (existing != null) {
+            store.saveAccounts(accounts.map { if (it.id == existing.id) it.copy(updatedAt = now) else it })
+            store.putCredential(existing.id, credential(now))
+        } else {
+            val account = StoredAccount(
+                id = "a-" + java.util.UUID.randomUUID().toString().take(8),
+                providerId = provider.id,
+                name = name,
+                createdAt = now,
+                updatedAt = now,
+            )
+            store.saveAccounts(accounts + account)
+            store.putCredential(account.id, credential(now))
+        }
+        replaceAccountId = null
+    }
+
+    /** 给已有账号重新填写 API Key。 */
+    fun updateAccountToken(accountId: String, token: String) {
+        if (token.isBlank()) {
+            _state.value = _state.value.copy(message = "API Key 不能为空")
+            return
+        }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                UsageSync.withCredentialsLock {
+                    val now = System.currentTimeMillis()
+                    store.saveAccounts(store.loadAccounts().map {
+                        if (it.id == accountId) it.copy(updatedAt = now) else it
+                    })
+                    store.putCredential(accountId, Credential(token = token))
+                }
+            }
+            _state.value = _state.value.copy(message = "已更新登录信息")
+            reload()
+        }
     }
 
     /** 当前登录协程；取消登录时 cancel 它，轮询随之停止。 */
@@ -261,8 +306,9 @@ class MainViewModel internal constructor(
     /**
      * xAI 设备码登录。轮询流程在 [XaiLoginFlow]，这里只把事件映射到 [UiState.xaiLogin] 并落库。
      */
-    fun loginXai() {
+    fun loginXai(replaceAccountId: String? = null) {
         if (_state.value.xaiLogin != null || _state.value.oauthLogin != null) return
+        this.replaceAccountId = replaceAccountId
 
         // 立即给出反馈，避免「点了没反应」的错觉
         _state.value = _state.value.copy(
@@ -316,6 +362,7 @@ class MainViewModel internal constructor(
         xaiLoginSession++
         xaiLoginJob?.cancel()
         xaiLoginJob = null
+        replaceAccountId = null
         _state.value = _state.value.copy(xaiLogin = null)
     }
 
@@ -335,8 +382,9 @@ class MainViewModel internal constructor(
     private var claudePending: ClaudeOAuth.Pending? = null
 
     /** 开始 Claude 订阅登录：生成授权地址，等用户在浏览器授权后粘贴授权码。 */
-    fun loginClaude() {
+    fun loginClaude(replaceAccountId: String? = null) {
         if (_state.value.oauthLogin != null || _state.value.xaiLogin != null) return
+        this.replaceAccountId = replaceAccountId
         oauthLoginSession++
         val pending = runCatching { oauth.claudeBegin() }.getOrElse { e ->
             _state.value = _state.value.copy(message = "无法开始登录: ${e.message ?: e.javaClass.simpleName}")
@@ -393,8 +441,9 @@ class MainViewModel internal constructor(
     }
 
     /** 开始 ChatGPT 订阅登录（Codex 设备码）。 */
-    fun loginChatGpt() {
+    fun loginChatGpt(replaceAccountId: String? = null) {
         if (_state.value.oauthLogin != null || _state.value.xaiLogin != null) return
+        this.replaceAccountId = replaceAccountId
         _state.value = _state.value.copy(
             oauthLogin = OAuthLogin(provider = Provider.CHATGPT_SUB, status = "正在获取设备码…")
         )
@@ -427,6 +476,7 @@ class MainViewModel internal constructor(
         oauthLoginJob?.cancel()
         oauthLoginJob = null
         claudePending = null
+        replaceAccountId = null
         _state.value = _state.value.copy(oauthLogin = null)
     }
 
@@ -463,7 +513,7 @@ class MainViewModel internal constructor(
                 // 与刷新写回共用凭据锁，避免刷新把刚删掉的凭据又写回去
                 UsageSync.withCredentialsLock {
                     store.saveAccounts(store.loadAccounts().filterNot { it.id == id })
-                    store.saveCredentials(store.loadCredentials() - id)
+                    store.removeCredential(id)
                 }
             }
             reload()

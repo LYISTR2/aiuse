@@ -44,6 +44,7 @@ internal fun ServicesContent(
     onCurrencyChange: (String) -> Unit = {},
     onMove: (Int, Int) -> Unit = { _, _ -> },
     onAdd: () -> Unit = {},
+    onRelogin: (ltd.usage.tracker.data.StoredAccount) -> Unit = {},
     listState: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(bottom = 12.dp),
     refreshing: Boolean = false,
@@ -79,6 +80,9 @@ internal fun ServicesContent(
                 fxLive = state.fxLive,
                 onCurrencyChange = onCurrencyChange,
             )
+            if (state.credentialsUndecryptable) {
+                DecryptErrorCard()
+            }
         }
         itemsIndexed(ordered, key = { _, a -> a.id }) { index, account ->
             var entered by rememberSaveable { mutableStateOf(false) }
@@ -136,6 +140,8 @@ internal fun ServicesContent(
                     index = index,
                     count = ordered.size,
                     refreshing = refreshing,
+                    needsRelogin = account.id in state.accountsNeedingRelogin,
+                    onRelogin = { onRelogin(account) },
                 )
             }
         }

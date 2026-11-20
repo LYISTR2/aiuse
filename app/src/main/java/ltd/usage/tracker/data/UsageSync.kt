@@ -59,7 +59,14 @@ object UsageSync {
     internal interface Storage {
         fun loadAccounts(): List<StoredAccount>
         fun loadCredentials(): Map<String, Credential>
+        fun loadCredentialState(): CredentialState = CredentialState.Available(loadCredentials())
         fun saveCredentials(creds: Map<String, Credential>)
+        fun putCredential(id: String, cred: Credential) {
+            saveCredentials(loadCredentials() + (id to cred))
+        }
+        fun removeCredential(id: String) {
+            saveCredentials(loadCredentials() - id)
+        }
         fun loadSnapshots(): List<UsageSnapshot>
         fun saveSnapshots(list: List<UsageSnapshot>)
     }
@@ -75,7 +82,10 @@ object UsageSync {
         override fun loadAccounts() = this@asStorage.loadAccounts()
         override fun saveAccounts(accounts: List<StoredAccount>) { this@asStorage.saveAccounts(accounts) }
         override fun loadCredentials() = this@asStorage.loadCredentials()
+        override fun loadCredentialState() = this@asStorage.loadCredentialState()
         override fun saveCredentials(creds: Map<String, Credential>) { this@asStorage.saveCredentials(creds) }
+        override fun putCredential(id: String, cred: Credential) { this@asStorage.putCredential(id, cred) }
+        override fun removeCredential(id: String) { this@asStorage.removeCredential(id) }
         override fun loadSnapshots() = this@asStorage.loadSnapshots()
         override fun saveSnapshots(list: List<UsageSnapshot>) { this@asStorage.saveSnapshots(list) }
         override fun loadSettings() = this@asStorage.loadSettings()
@@ -114,13 +124,17 @@ object UsageSync {
         val accounts = runIo { storage.loadAccounts() }
         if (accounts.isEmpty()) return@coroutineScope emptyList()
 
+        // 整份凭据解不开时不拉用量、不写快照，避免用空映射覆盖或留下「缺少凭据」误报
+        val credState = runIo { storage.loadCredentialState() }
+        if (credState is CredentialState.Undecryptable) return@coroutineScope emptyList()
+
         val doFetch: (Provider, Credential) -> UsageResult =
             if (fetch != null) { p, c -> fetch(p, c.token) } else fetchCredential
         val allRefreshers =
             if (refreshToken != null) refreshers + (Provider.XAI to { r: String -> refreshToken(r).toOAuthTokens() })
             else refreshers
 
-        val creds = runIo { storage.loadCredentials() }
+        val creds = (credState as? CredentialState.Available)?.credentials ?: emptyMap()
         val permits = Semaphore(MAX_PARALLEL)
         val results = accounts.map { acc ->
             async(Dispatchers.IO) {

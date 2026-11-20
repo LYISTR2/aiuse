@@ -116,4 +116,25 @@ class UsageSyncConcurrencyTest {
         // 快照已落库
         assertEquals(results, storage.snapshots)
     }
+
+    @Test
+    fun refreshAllSkipsFetchAndWritesWhenUndecryptable() = runBlocking {
+        var snapshotsWritten = false
+        var credsWritten = false
+        val storage = object : UsageSync.Storage {
+            override fun loadAccounts() = listOf(acc("a1", Provider.DEEPSEEK))
+            override fun loadCredentials() = emptyMap<String, Credential>()
+            override fun loadCredentialState() = CredentialState.Undecryptable
+            override fun saveCredentials(creds: Map<String, Credential>) { credsWritten = true }
+            override fun loadSnapshots() = emptyList<UsageSnapshot>()
+            override fun saveSnapshots(list: List<UsageSnapshot>) { snapshotsWritten = true }
+        }
+        val results = UsageSync.refreshAll(
+            storage,
+            fetch = { _, _ -> error("解密失败时不应发起请求") },
+        )
+        assertTrue(results.isEmpty())
+        assertTrue("不应写快照", !snapshotsWritten)
+        assertTrue("不应写凭据", !credsWritten)
+    }
 }

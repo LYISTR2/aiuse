@@ -19,7 +19,22 @@ import java.io.File
  *
  * 元数据与密钥物理分离：即使 accounts.json 泄露也拿不到凭据。
  */
-class Store(context: Context) {
+/**
+ * 凭据读取结果：把「还没有凭据文件」和「文件在但解不开」分开，
+ * 避免解密失败时被当成空库再写回去。
+ */
+sealed class CredentialState {
+    data class Available(val credentials: Map<String, Credential>) : CredentialState()
+    data object Missing : CredentialState()
+    data object Undecryptable : CredentialState()
+}
+
+class Store(
+    context: Context,
+    private val encrypt: (ByteArray) -> ByteArray = CredentialCipher::encrypt,
+    private val decrypt: (ByteArray) -> ByteArray = CredentialCipher::decrypt,
+    private val nowMs: () -> Long = { System.currentTimeMillis() },
+) {
 
     private val root: File = File(context.filesDir, "store").apply { mkdirs() }
     private val json = Json {
@@ -51,23 +66,87 @@ class Store(context: Context) {
 
     // ---------- 凭据（加密） ----------
 
-    fun loadCredentials(): Map<String, Credential> {
-        val f = file("credentials.bin")
-        if (!f.exists()) return emptyMap()
-        return runCatching {
-            val plain = CredentialCipher.decrypt(f.readBytes())
-            json.decodeFromString(credentialMapSerializer, plain.decodeToString())
+    /** 可读时返回映射；缺失或解不开时返回空 Map，不会写盘。写路径请用 [loadCredentialState] / [putCredential]。 */
+    fun loadCredentials(): Map<String, Credential> =
+        when (val s = loadCredentialState()) {
+            is CredentialState.Available -> s.credentials
+            is CredentialState.Missing, is CredentialState.Undecryptable -> emptyMap()
+        }
+
+    fun loadCredentialState(): CredentialState = synchronized(lock) { loadCredentialStateLocked() }
+
+    private fun loadCredentialStateLocked(): CredentialState {
+        val f = file(CREDENTIALS_FILE)
+        if (!f.exists()) return CredentialState.Missing
+        return try {
+            val plain = decrypt(f.readBytes())
+            val map = json.decodeFromString(credentialMapSerializer, plain.decodeToString())
                 .mapValues { (_, d) -> Credential(d.token, d.refreshToken, d.accountId, d.expiresAt) }
-        }.getOrDefault(emptyMap())
+            CredentialState.Available(map)
+        } catch (_: Exception) {
+            backupCorruptLocked()
+            CredentialState.Undecryptable
+        }
     }
 
+    /**
+     * 写入完整映射。若当前密文已经解不开，先备份再写，避免把原文件静默覆盖成空库。
+     */
     fun saveCredentials(creds: Map<String, Credential>) = synchronized(lock) {
+        if (loadCredentialStateLocked() is CredentialState.Undecryptable) {
+            // load 里已经做过备份
+        }
+        writeCredentialsLocked(creds)
+    }
+
+    /**
+     * 写入或更新一条凭据。当前文件可读则与已有条目合并；
+     * 解不开时先备份原文件，再只写入这一条（以及其他已经恢复、写在新文件里的条目）。
+     */
+    fun putCredential(id: String, cred: Credential) = synchronized(lock) {
+        val base = when (val s = loadCredentialStateLocked()) {
+            is CredentialState.Available -> s.credentials
+            is CredentialState.Missing -> emptyMap()
+            is CredentialState.Undecryptable -> emptyMap()
+        }
+        writeCredentialsLocked(base + (id to cred))
+    }
+
+    /**
+     * 删除一条凭据。密文解不开时只保留备份，不把空映射写回原文件。
+     */
+    fun removeCredential(id: String) = synchronized(lock) {
+        when (val s = loadCredentialStateLocked()) {
+            is CredentialState.Available -> writeCredentialsLocked(s.credentials - id)
+            is CredentialState.Missing -> Unit
+            is CredentialState.Undecryptable -> Unit
+        }
+    }
+
+    private fun writeCredentialsLocked(creds: Map<String, Credential>) {
         val dto = creds.mapValues { (_, c) ->
             CredentialDto(c.token, c.refreshToken, c.accountId, c.expiresAt)
         }
         val plain = json.encodeToString(credentialMapSerializer, dto).encodeToByteArray()
-        writeAtomicBytes("credentials.bin", CredentialCipher.encrypt(plain))
+        writeAtomicBytes(CREDENTIALS_FILE, encrypt(plain))
     }
+
+    /**
+     * 把当前 credentials.bin 复制为 credentials.bin.corrupt-<时间戳>，只留最新一份。
+     * 原文件不动：在用户写入新凭据之前，损坏密文还在原位。
+     */
+    private fun backupCorruptLocked() {
+        val src = file(CREDENTIALS_FILE)
+        if (!src.exists()) return
+        val dest = file(CORRUPT_PREFIX + nowMs())
+        src.copyTo(dest, overwrite = true)
+        root.listFiles()?.filter { it.name.startsWith(CORRUPT_PREFIX) && it != dest }?.forEach { it.delete() }
+    }
+
+    fun listCorruptBackups(): List<File> =
+        synchronized(lock) {
+            root.listFiles()?.filter { it.name.startsWith(CORRUPT_PREFIX) }?.sortedBy { it.name }.orEmpty()
+        }
 
     // ---------- 用量快照 ----------
 
@@ -123,6 +202,11 @@ class Store(context: Context) {
     }
 
     val directory: File get() = root
+
+    companion object {
+        const val CREDENTIALS_FILE = "credentials.bin"
+        const val CORRUPT_PREFIX = "credentials.bin.corrupt-"
+    }
 }
 
 @kotlinx.serialization.Serializable
