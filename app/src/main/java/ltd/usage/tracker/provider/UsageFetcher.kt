@@ -63,6 +63,6 @@ object UsageFetcher {
     fun fetch(provider: Provider, credential: Credential): UsageResult = try {
         vendors.getValue(provider).fetch(credential)
     } catch (e: Exception) {
-        UsageResult(error = redact(e.message ?: e.javaClass.simpleName, credential.token))
+        UsageResult(error = redact(e.message ?: e.javaClass.simpleName, credential.token, credential.refreshToken))
     }
 }

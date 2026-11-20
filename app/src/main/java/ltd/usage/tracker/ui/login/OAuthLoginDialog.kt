@@ -15,7 +15,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import ltd.usage.tracker.data.Provider
 import ltd.usage.tracker.ui.OAuthLogin
+import ltd.usage.tracker.ui.theme.ProviderLogoImage
 import ltd.usage.tracker.ui.theme.Palette
 import ltd.usage.tracker.ui.theme.Type
 
@@ -24,6 +26,18 @@ import ltd.usage.tracker.ui.theme.Type
 // 1.8.0 从 XaiLoginDialog 抽出：外壳（标题 + 正文 + 按钮）与两种正文：
 //  - [DeviceCodeBody]：设备码（xAI、ChatGPT）
 //  - [PasteCodeBody]：打开授权页 → 粘贴授权码（Claude）
+
+
+@Composable
+private fun LoginTitle(title: String, titleProviderId: String?) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (titleProviderId != null) {
+            ProviderLogoImage(providerId = titleProviderId, size = 20.dp)
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(title, fontSize = Type.SheetTitleSize.sp, fontWeight = FontWeight.SemiBold, color = Palette.TextPrimary)
+    }
+}
 
 /**
  * 对话框外壳。[confirm] 为 null 时只有一个「取消」按钮（xAI / 设备码，1.7.1 原样）；
@@ -35,6 +49,7 @@ internal fun OAuthLoginDialog(
     title: String,
     onCancel: () -> Unit,
     dismissOnOutside: Boolean = true,
+    titleProviderId: String? = null,
     confirm: (@Composable () -> Unit)? = null,
     body: @Composable () -> Unit,
 ) {
@@ -49,7 +64,7 @@ internal fun OAuthLoginDialog(
         shape = RoundedCornerShape(28.dp),
         properties = DialogProperties(dismissOnClickOutside = dismissOnOutside),
         title = {
-            Text(title, fontSize = Type.SheetTitleSize.sp, fontWeight = FontWeight.SemiBold, color = Palette.TextPrimary)
+            LoginTitle(title, titleProviderId)
         },
         text = body,
         confirmButton = confirm ?: cancelButton,
@@ -65,6 +80,7 @@ internal fun OAuthLoginDialog(
 internal fun OAuthLoginCardPreview(
     title: String,
     buttons: (@Composable RowScope.() -> Unit)? = null,
+    titleProviderId: String? = null,
     body: @Composable () -> Unit,
 ) {
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -75,7 +91,7 @@ internal fun OAuthLoginCardPreview(
                 .background(Palette.Surface)
                 .padding(20.dp),
         ) {
-            Text(title, fontSize = Type.SheetTitleSize.sp, fontWeight = FontWeight.SemiBold, color = Palette.TextPrimary)
+            LoginTitle(title, titleProviderId)
             Spacer(Modifier.height(10.dp))
             body()
             if (buttons != null) {
@@ -298,6 +314,7 @@ internal fun SubscriptionLoginDialog(
             title = oauthTitle(login),
             onCancel = onCancel,
             dismissOnOutside = false,
+            titleProviderId = Provider.ANTHROPIC.id,
             confirm = { SubmitCodeButton(enabled = code.isNotBlank() && !login.submitting) { onSubmitCode(code) } },
         ) {
             PasteCodeBody(
@@ -312,7 +329,7 @@ internal fun SubscriptionLoginDialog(
             )
         }
     } else {
-        OAuthLoginDialog(title = oauthTitle(login), onCancel = onCancel) {
+        OAuthLoginDialog(title = oauthTitle(login), onCancel = onCancel, titleProviderId = Provider.OPENAI.id) {
             DeviceCodeBody(
                 userCode = login.userCode,
                 verificationUri = login.verificationUri,
@@ -331,6 +348,7 @@ internal fun SubscriptionLoginCardPreview(login: OAuthLogin, pastedCode: String 
     if (login.pasteMode) {
         OAuthLoginCardPreview(
             title = oauthTitle(login),
+            titleProviderId = Provider.ANTHROPIC.id,
             buttons = {
                 TextButton(onClick = {}) { Text("取消", color = Palette.TextSecondary, fontSize = Type.BodySize.sp) }
                 Spacer(Modifier.width(8.dp))
@@ -349,7 +367,7 @@ internal fun SubscriptionLoginCardPreview(login: OAuthLogin, pastedCode: String 
             )
         }
     } else {
-        OAuthLoginCardPreview(title = oauthTitle(login)) {
+        OAuthLoginCardPreview(title = oauthTitle(login), titleProviderId = Provider.OPENAI.id) {
             DeviceCodeBody(
                 userCode = login.userCode,
                 verificationUri = login.verificationUri,

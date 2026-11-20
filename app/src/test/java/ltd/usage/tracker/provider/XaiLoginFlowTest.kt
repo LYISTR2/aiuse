@@ -1,8 +1,10 @@
 package ltd.usage.tracker.provider
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Test
 
 /** 设备码轮询流程（从 ViewModel 挪到 XaiLoginFlow 后的行为护栏）。 */
@@ -52,5 +54,14 @@ class XaiLoginFlowTest {
             now = { t },
         ).run().toList()
         assertEquals(XaiLoginFlow.Event.Failed("登录超时，请重试"), timeout.last())
+    }
+
+    @Test
+    fun cancellationDuringDeviceCodeIsNotReportedAsFailure() = runBlocking {
+        try {
+            XaiLoginFlow(requestDeviceCode = { throw CancellationException("cancelled") }).run().toList()
+            fail("取消应向上抛出，而不是变成 Failed")
+        } catch (_: CancellationException) {
+        }
     }
 }

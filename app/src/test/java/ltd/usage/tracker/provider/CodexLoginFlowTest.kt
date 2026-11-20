@@ -1,8 +1,10 @@
 package ltd.usage.tracker.provider
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Test
 
 /** ChatGPT 设备码流程：成功、各类失败。取消见 MainViewModelOAuthTest。 */
@@ -45,5 +47,14 @@ class CodexLoginFlowTest {
             now = { t.also { t += 30_000 } },
         ).run().toList()
         assertEquals(CodexLoginFlow.Event.Failed("登录超时，请重试"), timeout.last())
+    }
+
+    @Test
+    fun cancellationDuringDeviceCodeIsNotReportedAsFailure() = runBlocking {
+        try {
+            CodexLoginFlow(requestDeviceCode = { throw CancellationException("cancelled") }).run().toList()
+            fail("取消应向上抛出，而不是变成 Failed")
+        } catch (_: CancellationException) {
+        }
     }
 }

@@ -27,7 +27,7 @@ class VendorDispatchTest {
     /** 每家各喂几种响应：真实样例、空对象、非 JSON、401 回显 token。 */
     private val samples: Map<String, String> = mapOf(
         "api.deepseek.com" to """{"is_available":true,"balance_infos":[{"currency":"CNY","total_balance":"110.25"}]}""",
-        "api.anthropic.com" to """{"five_hour":{"utilization":0.37}}""",
+        "api.anthropic.com" to """{"five_hour":{"utilization":37.0}}""",
         "api.openai.com" to """{"orgs":[{"title":"Acme"}]}""",
         "api.moonshot.cn" to """{"data":{"available_balance":"12.5"}}""",
         "open.bigmodel.cn" to """{"msg":"ok"}""",

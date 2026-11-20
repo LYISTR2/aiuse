@@ -1,0 +1,27 @@
+<!-- Source: @lobehub/icons-static-svg 1.104.0 icons/stepfun-color.svg (MIT, LobeHub) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillType="evenOdd"
+        android:pathData="M22.012 0h1.032v0.927H24v0.968h-0.956V3.78h-1.032V1.896h-1.878v-0.97h1.878V0zM2.6 12.371V1.87h0.969v10.502h-0.97z m10.423 0.66h10.95v0.918h-6.208v9.579h-4.742V13.03zM5.629 3.333v12.356H0v4.51h10.386V8L20.859 8l-0.003-4.668-15.227 0.001z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="1.646"
+                android:startY="1.916"
+                android:endX="18.342"
+                android:endY="22.091">
+                <item
+                    android:color="#FF01A9FF"
+                    android:offset="0"/>
+                <item
+                    android:color="#FF0160FF"
+                    android:offset="1"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

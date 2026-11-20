@@ -16,7 +16,8 @@ internal object AnthropicVendor : Vendor {
         val utilization = root["five_hour"]?.jsonObject
             ?.get("utilization")?.jsonPrimitive?.doubleOrNull
         return UsageResult(
-            note = utilization?.let { "5h 窗口已用 ${(it * 100).toInt()}%" },
+            // utilization 已是 0–100，不能再乘 100
+            note = utilization?.let { "5h 窗口已用 ${it.toInt()}%" },
         )
     }
 }

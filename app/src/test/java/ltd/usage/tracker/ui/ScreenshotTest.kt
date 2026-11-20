@@ -549,4 +549,161 @@ class ScreenshotTest {
         }
     }
 
+
+
+    @Test
+    fun homeDark192() {
+        val (accounts, snapshots) = sampleHomeState()
+        render("192-home-dark", dark = true) {
+            UsageHome(
+                state = UiState(accounts = accounts, snapshots = snapshots, displayCurrency = "USD", fxLive = true, dynamicColor = false),
+                latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                onRefresh = {},
+                onAdd = {},
+                onToggleTheme = {},
+                onSortModeChange = {},
+                onDynamicColorChange = {},
+                onDelete = {},
+                onCurrencyChange = {},
+                onMove = { _, _ -> },
+                snackbar = remember { SnackbarHostState() },
+                dynamicColorAvailable = false,
+            )
+        }
+    }
+
+    @Test
+    fun homeLight192() {
+        val (accounts, snapshots) = sampleHomeState()
+        render("192-home-light", dark = false) {
+            UsageHome(
+                state = UiState(accounts = accounts, snapshots = snapshots, displayCurrency = "USD", fxLive = true, dark = false, dynamicColor = false),
+                latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                onRefresh = {},
+                onAdd = {},
+                onToggleTheme = {},
+                onSortModeChange = {},
+                onDynamicColorChange = {},
+                onDelete = {},
+                onCurrencyChange = {},
+                onMove = { _, _ -> },
+                snackbar = remember { SnackbarHostState() },
+                dynamicColorAvailable = false,
+            )
+        }
+    }
+
+    @Test
+    fun addFormDark192() {
+        render("192-add-dark", dark = true) {
+            AddAccountForm(
+                onDismiss = {},
+                onConfirm = { _, _, _ -> },
+                onXaiLogin = {},
+                onSubscriptionLogin = {},
+                initialProvider = Provider.ANTHROPIC,
+                initialMethod = AddMethod.SUBSCRIPTION,
+            )
+        }
+    }
+
+    @Test
+    fun addFormLight192() {
+        render("192-add-light", dark = false) {
+            AddAccountForm(
+                onDismiss = {},
+                onConfirm = { _, _, _ -> },
+                onXaiLogin = {},
+                onSubscriptionLogin = {},
+                initialProvider = Provider.ANTHROPIC,
+                initialMethod = AddMethod.SUBSCRIPTION,
+            )
+        }
+    }
+
+
+
+    @Test
+    fun homeDark193() {
+        val (accounts, snapshots) = sampleHomeState()
+        render("193-home-dark", dark = true) {
+            UsageHome(
+                state = UiState(accounts = accounts, snapshots = snapshots, displayCurrency = "USD", fxLive = true, dynamicColor = false),
+                latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                onRefresh = {},
+                onAdd = {},
+                onToggleTheme = {},
+                onSortModeChange = {},
+                onDynamicColorChange = {},
+                onDelete = {},
+                onCurrencyChange = {},
+                onMove = { _, _ -> },
+                snackbar = remember { SnackbarHostState() },
+                dynamicColorAvailable = false,
+            )
+        }
+    }
+
+    @Test
+    fun homeLight193() {
+        val (accounts, snapshots) = sampleHomeState()
+        render("193-home-light", dark = false) {
+            UsageHome(
+                state = UiState(accounts = accounts, snapshots = snapshots, displayCurrency = "USD", fxLive = true, dark = false, dynamicColor = false),
+                latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                onRefresh = {},
+                onAdd = {},
+                onToggleTheme = {},
+                onSortModeChange = {},
+                onDynamicColorChange = {},
+                onDelete = {},
+                onCurrencyChange = {},
+                onMove = { _, _ -> },
+                snackbar = remember { SnackbarHostState() },
+                dynamicColorAvailable = false,
+            )
+        }
+    }
+
+    @Test
+    fun homeDark194() {
+        val (accounts, snapshots) = sampleHomeState()
+        render("194-home-dark", dark = true) {
+            UsageHome(
+                state = UiState(accounts = accounts, snapshots = snapshots, displayCurrency = "USD", fxLive = true, dynamicColor = false),
+                latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                onRefresh = {},
+                onAdd = {},
+                onToggleTheme = {},
+                onSortModeChange = {},
+                onDynamicColorChange = {},
+                onDelete = {},
+                onCurrencyChange = {},
+                onMove = { _, _ -> },
+                snackbar = remember { SnackbarHostState() },
+                dynamicColorAvailable = false,
+            )
+        }
+    }
+
+    @Test
+    fun homeLight194() {
+        val (accounts, snapshots) = sampleHomeState()
+        render("194-home-light", dark = false) {
+            UsageHome(
+                state = UiState(accounts = accounts, snapshots = snapshots, displayCurrency = "USD", fxLive = true, dark = false, dynamicColor = false),
+                latestFor = { id -> snapshots.firstOrNull { it.accountId == id } },
+                onRefresh = {},
+                onAdd = {},
+                onToggleTheme = {},
+                onSortModeChange = {},
+                onDynamicColorChange = {},
+                onDelete = {},
+                onCurrencyChange = {},
+                onMove = { _, _ -> },
+                snackbar = remember { SnackbarHostState() },
+                dynamicColorAvailable = false,
+            )
+        }
+    }
 }

@@ -2,7 +2,7 @@
 
 AI 订阅用量追踪的 Android 应用。把各家 AI 服务的余额、额度、订阅用量集中在一个界面里看。
 
-**v1.9.1**（versionCode 18）· Kotlin + Jetpack Compose · minSdk 26 / targetSdk 35
+**v1.9.5**（versionCode 22）· Kotlin + Jetpack Compose · minSdk 26 / targetSdk 35
 
 <p align="center">
   <img src="docs/screenshots/02-accounts.png" width="30%" alt="主界面" />

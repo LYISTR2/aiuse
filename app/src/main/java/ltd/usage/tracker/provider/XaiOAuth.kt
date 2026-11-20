@@ -46,13 +46,20 @@ object XaiOAuth {
         val verificationUriComplete: String?,
         val expiresIn: Int,
         val interval: Int,
-    )
+    ) {
+        // device_code 是轮询凭证，不能出现在日志里；userCode 本来就要展示给用户
+        override fun toString(): String =
+            "DeviceCode(deviceCode=***(${deviceCode.length}), userCode=$userCode, verificationUri=$verificationUri, verificationUriComplete=$verificationUriComplete, expiresIn=$expiresIn, interval=$interval)"
+    }
 
     data class Tokens(
         val accessToken: String,
         val refreshToken: String?,
         val expiresIn: Int,
-    )
+    ) {
+        override fun toString(): String =
+            "Tokens(accessToken=***(${accessToken.length}), refreshToken=${refreshToken?.let { "***(${it.length})" }}, expiresIn=$expiresIn)"
+    }
 
     /** 第一步：申请设备码。 */
     fun requestDeviceCode(): DeviceCode {
@@ -103,6 +110,7 @@ object XaiOAuth {
             "expired_token" -> PollResult.Failed("设备码已过期，请重新登录")
             else -> PollResult.Failed(
                 resp.body["error_description"]?.jsonPrimitive?.content
+                    ?.take(100)
                     ?: "登录失败 (HTTP ${resp.code})"
             )
         }

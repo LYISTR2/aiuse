@@ -98,7 +98,6 @@ class SecurityTest {
             "ftp://example.com/dav/",
             "file:///sdcard/dav/",
             "//example.com/dav/",
-            "HTTPS://example.com/dav/",  // 大写前缀不匹配 startsWith
         ).forEach { url ->
             try {
                 WebDavClient(url, "u", "p")
@@ -111,7 +110,33 @@ class SecurityTest {
     @Test
     fun `webdav allows https and localhost`() {
         WebDavClient("https://dav.example.com/dav/", "u", "p")
+        WebDavClient("HTTPS://dav.example.com/dav/", "u", "p")
         WebDavClient("http://localhost:8080/dav/", "u", "p")
+        WebDavClient("http://127.0.0.1:8080/dav/", "u", "p")
+    }
+
+    @Test
+    fun `webdav rejects localhost prefix bypass`() {
+        listOf(
+            "http://localhost.evil.com/dav/",
+            "http://localhost@evil.com/dav/",
+            "http://localhost.evil.com:8080/dav/",
+        ).forEach { url ->
+            try {
+                WebDavClient(url, "u", "p")
+                fail("应拒绝本机前缀绕过: $url")
+            } catch (_: IllegalArgumentException) {
+            }
+        }
+    }
+
+    @Test
+    fun `webdav rejects credentials embedded in url`() {
+        try {
+            WebDavClient("https://user:pass@dav.example.com/dav/", "u", "p")
+            fail("内嵌用户名密码必须被拒绝")
+        } catch (_: IllegalArgumentException) {
+        }
     }
 
     @Test
@@ -330,6 +355,17 @@ class SecurityTest {
     @Test
     fun `redact handles empty token`() {
         assertEquals("boom", redact("boom", ""))
+    }
+
+    @Test
+    fun `redact also strips refresh token`() {
+        val access = "sk-live-ACCESS-abcdef123456"
+        val refresh = "rt-REFRESH-9876543210SECRET"
+        val msg = "HTTP 400: invalid_grant token=$refresh access=$access"
+        val out = redact(msg, access, refresh)
+        assertFalse(out.contains(access))
+        assertFalse(out.contains(refresh))
+        assertTrue(out.contains("***"))
     }
 
     // ---------------------------------------------------- 工具

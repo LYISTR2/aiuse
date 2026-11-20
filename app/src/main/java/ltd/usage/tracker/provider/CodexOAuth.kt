@@ -41,11 +41,17 @@ object CodexOAuth {
         val verificationUri: String,
         val interval: Int,
         val expiresIn: Int = MAX_WAIT_SECONDS,
-    )
+    ) {
+        override fun toString(): String =
+            "DeviceCode(deviceAuthId=***(${deviceAuthId.length}), userCode=$userCode, verificationUri=$verificationUri, interval=$interval, expiresIn=$expiresIn)"
+    }
 
     sealed interface PollResult {
         /** 用户已授权，服务端直接给出授权码和本次的 PKCE verifier。 */
-        data class Authorized(val authorizationCode: String, val codeVerifier: String) : PollResult
+        data class Authorized(val authorizationCode: String, val codeVerifier: String) : PollResult {
+            override fun toString(): String =
+                "Authorized(authorizationCode=***(${authorizationCode.length}), codeVerifier=***)"
+        }
         data object Pending : PollResult
         data class Failed(val message: String) : PollResult
     }

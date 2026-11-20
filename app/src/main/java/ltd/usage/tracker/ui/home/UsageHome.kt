@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -13,7 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumExtendedFloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -39,14 +40,10 @@ import ltd.usage.tracker.ui.theme.rememberReduceMotion
 
 /**
  * 顶栏副标题是否显示。
- * 展开且汇总卡仍在首屏时藏起来，避免和汇总卡大数字重复；
- * 顶栏已明显收起，或汇总卡已滚出时再显示，避免总额完全不可见。
+ * 只看汇总卡是否还在屏幕里：卡还在就藏，避免半收起时和卡上的总额重复；
+ * 卡已滚出后再显示，这样总额不会完全看不见。
  */
-internal fun shouldShowTopBarSubtitle(
-    collapsedFraction: Float,
-    summaryCardVisible: Boolean,
-    collapseThreshold: Float = 0.5f,
-): Boolean = collapsedFraction >= collapseThreshold || !summaryCardVisible
+internal fun shouldShowTopBarSubtitle(summaryCardVisible: Boolean): Boolean = !summaryCardVisible
 
 /**
  * 首页骨架：LargeFlexibleTopAppBar + 下拉刷新 + Extended FAB。
@@ -89,7 +86,6 @@ internal fun UsageHome(
     val showSubtitle by remember {
         derivedStateOf {
             shouldShowTopBarSubtitle(
-                collapsedFraction = scrollBehavior.state.collapsedFraction,
                 summaryCardVisible = listState.firstVisibleItemIndex == 0,
             )
         }
@@ -144,9 +140,9 @@ internal fun UsageHome(
             )
         },
         floatingActionButton = {
-            MediumExtendedFloatingActionButton(
-                text = { Text("添加服务") },
-                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+            ExtendedFloatingActionButton(
+                text = { Text("添加服务", style = MaterialTheme.typography.labelLarge) },
+                icon = { Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(24.dp)) },
                 onClick = onAdd,
                 expanded = fabExpanded || state.accounts.isEmpty(),
             )

@@ -29,6 +29,7 @@ class CodexLoginFlow(
     fun run(): Flow<Event> = flow {
         val device = withContext(Dispatchers.IO) { runCatching { requestDeviceCode() } }
             .getOrElse { e ->
+                if (e is CancellationException) throw e
                 emit(Event.Failed(failure("获取设备码失败", e)))
                 return@flow
             }
@@ -39,7 +40,9 @@ class CodexLoginFlow(
         while (now() < deadline) {
             delay(interval)
             // 单次轮询的网络异常不算失败，下一轮再试
-            when (val r = withContext(Dispatchers.IO) { runCatching { pollOnce(device) }.getOrNull() }) {
+            when (val r = withContext(Dispatchers.IO) {
+                runCatching { pollOnce(device) }.onFailure { if (it is CancellationException) throw it }.getOrNull()
+            }) {
                 is CodexOAuth.PollResult.Authorized -> {
                     val login = withContext(Dispatchers.IO) {
                         runCatching { exchange(r.authorizationCode, r.codeVerifier) }

@@ -76,14 +76,16 @@ private const val MIN_REDACT_LEN = 8
  * 收到的 key 回显在响应体里。这条路径会把 token 一路带到 UI 和
  * 快照文件，所以必须在出口处脱敏。
  */
-internal fun redact(msg: String, token: String): String {
-    if (token.isEmpty()) return msg
+internal fun redact(msg: String, vararg secrets: String?): String {
     var out = msg
-    // 从完整 token 到较短的截断片段逐级替换：响应体只取前 200 字符时，
+    // 从完整 secret 到较短的截断片段逐级替换：响应体只取前 200 字符时，
     // token 可能被切成任意长度的一段，只替换完整串会漏掉残片。
     // 下限 8 字符，避免把 "sk-live-" 这类公共前缀误伤进无关文本。
-    for (len in token.length downTo MIN_REDACT_LEN) {
-        out = out.replace(token.take(len), "***")
+    for (token in secrets) {
+        if (token.isNullOrEmpty()) continue
+        for (len in token.length downTo MIN_REDACT_LEN) {
+            out = out.replace(token.take(len), "***")
+        }
     }
     return out
 }

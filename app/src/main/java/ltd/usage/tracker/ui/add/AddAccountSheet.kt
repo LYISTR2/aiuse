@@ -46,9 +46,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ltd.usage.tracker.data.Provider
+import ltd.usage.tracker.ui.theme.ProviderMarkBadge
 import ltd.usage.tracker.ui.theme.Type
-import ltd.usage.tracker.ui.theme.providerLetter
-import ltd.usage.tracker.ui.theme.providerPolygon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -220,19 +219,11 @@ private fun ProviderTile(
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier
-                .size(40.dp)
-                .clip(providerPolygon(provider.id).toShape())
-                .background(if (selected) scheme.primary else scheme.secondaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                providerLetter(provider.displayName, provider.displayName),
-                style = MaterialTheme.typography.titleMediumEmphasized,
-                color = if (selected) scheme.onPrimary else scheme.onSecondaryContainer,
-            )
-        }
+        ProviderMarkBadge(
+            providerId = provider.id,
+            accountName = provider.displayName,
+            providerName = provider.displayName,
+        )
         Spacer(Modifier.size(8.dp))
         Text(
             provider.displayName,

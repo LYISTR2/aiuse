@@ -106,12 +106,12 @@ val NumberStyle = TextStyle(
     fontFeatureSettings = "tnum",
 )
 
-/** 汇总金额：displayLarge 57sp / wght 650 / wdth 112。 */
+/** 汇总金额：40sp / wght 600 / wdth 108，等宽数字。 */
 val SummaryNumberStyle = TextStyle(
-    fontFamily = robotoFlexFamily(650, 112f),
+    fontFamily = robotoFlexFamily(600, 108f),
     fontFeatureSettings = "tnum",
-    fontSize = 57.sp,
-    fontWeight = FontWeight(650),
+    fontSize = 40.sp,
+    fontWeight = FontWeight(600),
     letterSpacing = (-0.8).sp,
 )
 

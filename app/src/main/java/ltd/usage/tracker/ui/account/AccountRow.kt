@@ -66,8 +66,7 @@ import ltd.usage.tracker.ui.theme.NumberStyle
 import ltd.usage.tracker.ui.theme.Palette
 import ltd.usage.tracker.ui.theme.RollingNumber
 import ltd.usage.tracker.ui.theme.Type
-import ltd.usage.tracker.ui.theme.providerLetter
-import ltd.usage.tracker.ui.theme.providerPolygon
+import ltd.usage.tracker.ui.theme.ProviderMarkBadge
 import ltd.usage.tracker.ui.theme.rememberReduceMotion
 
 /**
@@ -217,24 +216,9 @@ internal fun AccountRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ProviderAvatar(providerId: String, accountName: String, providerName: String) {
-    val scheme = MaterialTheme.colorScheme
-    val shape = providerPolygon(providerId).toShape()
-    Box(
-        Modifier
-            .size(40.dp)
-            .clip(shape)
-            .background(scheme.secondaryContainer),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            providerLetter(accountName, providerName),
-            style = MaterialTheme.typography.titleMediumEmphasized,
-            color = scheme.onSecondaryContainer,
-        )
-    }
+    ProviderMarkBadge(providerId, accountName, providerName)
 }
 
 @Composable

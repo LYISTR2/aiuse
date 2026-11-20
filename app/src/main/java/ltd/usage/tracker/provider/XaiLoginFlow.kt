@@ -1,5 +1,6 @@
 package ltd.usage.tracker.provider
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -30,6 +31,7 @@ class XaiLoginFlow(
     fun run(): Flow<Event> = flow {
         val device = withContext(Dispatchers.IO) { runCatching { requestDeviceCode() } }
             .getOrElse { e ->
+                if (e is CancellationException) throw e
                 emit(Event.Failed("获取设备码失败: ${e.message ?: e.javaClass.simpleName}"))
                 return@flow
             }
@@ -40,7 +42,9 @@ class XaiLoginFlow(
         while (now() < deadline) {
             delay(interval)
             // 单次轮询的网络异常不算失败，下一轮再试
-            when (val r = withContext(Dispatchers.IO) { runCatching { pollOnce(device.deviceCode) }.getOrNull() }) {
+            when (val r = withContext(Dispatchers.IO) {
+                runCatching { pollOnce(device.deviceCode) }.onFailure { if (it is CancellationException) throw it }.getOrNull()
+            }) {
                 is XaiOAuth.PollResult.Authorized -> {
                     emit(Event.Authorized(r.tokens))
                     return@flow

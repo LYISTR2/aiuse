@@ -155,7 +155,7 @@ object UsageSync {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            UsageResult(error = redact(e.message ?: e.javaClass.simpleName, cred.token))
+            UsageResult(error = redact(e.message ?: e.javaClass.simpleName, cred.token, cred.refreshToken))
         }
 
     /**

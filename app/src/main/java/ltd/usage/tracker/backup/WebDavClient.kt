@@ -1,6 +1,7 @@
 package ltd.usage.tracker.backup
 
 import okhttp3.Credentials
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -31,7 +32,7 @@ class WebDavClient(
     private val binType = "application/octet-stream".toMediaType()
 
     init {
-        require(baseUrl.startsWith("https://") || baseUrl.startsWith("http://localhost")) {
+        require(isAllowedBaseUrl(baseUrl)) {
             "WebDAV 地址必须是 https://"
         }
         require(baseUrl.endsWith("/")) { "WebDAV 目录必须以 / 结尾" }
@@ -90,6 +91,24 @@ class WebDavClient(
 
     companion object {
         const val MAX_BYTES = 32L * 1024 * 1024
+
+        /**
+         * 只允许 https，或指向本机回环地址的 http（便于本地调试）。
+         * 不能用 startsWith("http://localhost")：http://localhost.evil.com
+         * 和 http://localhost@evil.com 都会被放行。
+         * 地址里内嵌的用户名密码也拒绝，凭据应走单独参数。
+         */
+        fun isAllowedBaseUrl(baseUrl: String): Boolean {
+            val url = runCatching { baseUrl.toHttpUrl() }.getOrNull() ?: return false
+            if (url.username.isNotEmpty() || url.password.isNotEmpty()) return false
+            val host = url.host.lowercase()
+            val loopback = host == "localhost" || host == "127.0.0.1" || host == "::1"
+            return when (url.scheme.lowercase()) {
+                "https" -> true
+                "http" -> loopback
+                else -> false
+            }
+        }
 
         /**
          * 校验备份文件名。

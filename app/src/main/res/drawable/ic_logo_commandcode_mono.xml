@@ -1,0 +1,11 @@
+<!-- Source: @lobehub/icons-static-svg 1.104.0 icons/commandcode.svg (MIT, LobeHub) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:fillType="evenOdd"
+        android:pathData="M19.334 0a4.67 4.67 0 0 0-4.666 4.668v2H9.334v-2A4.67 4.67 0 0 0 4.668 0 4.67 4.67 0 0 0 0 4.668a4.67 4.67 0 0 0 4.668 4.665h2v5.334h-2A4.67 4.67 0 0 0 0 19.334 4.67 4.67 0 0 0 4.668 24a4.67 4.67 0 0 0 4.666-4.666v-2h5.334v2A4.67 4.67 0 0 0 19.334 24 4.67 4.67 0 0 0 24 19.334a4.67 4.67 0 0 0-4.666-4.667h-2V9.333h2A4.67 4.67 0 0 0 24 4.668 4.673 4.673 0 0 0 19.334 0m-2 6.666v-2c0-1.107 0.893-2 2-2s2 0.893 2 2-0.893 2-2 2z m-12.668 0c-1.107 0-2-0.893-2-2s0.893-2 2-2 2 0.893 2 2v2z m4.666 8V9.334h5.334v5.334z m10.002 6.667c-1.107 0-2-0.893-2-2v-2h2c1.107 0 2 0.892 2 2 0 1.107-0.893 2-2 2m-14.668 0c-1.107 0-2-0.893-2-2 0-1.108 0.893-2 2-2h2v2c0 1.107-0.893 2-2 2"/>
+</vector>

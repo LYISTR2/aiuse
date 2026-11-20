@@ -1,6 +1,7 @@
 package ltd.usage.tracker.ui.login
 
 import androidx.compose.runtime.Composable
+import ltd.usage.tracker.data.Provider
 import ltd.usage.tracker.ui.XaiLogin
 
 // ---------------------------------------------------------------- xAI 登录
@@ -11,7 +12,7 @@ import ltd.usage.tracker.ui.XaiLogin
 @Composable
 internal fun XaiLoginDialog(login: XaiLogin, onCancel: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    OAuthLoginDialog(title = "登录 Grok", onCancel = onCancel) {
+    OAuthLoginDialog(title = "登录 Grok", onCancel = onCancel, titleProviderId = Provider.XAI.id) {
         DeviceCodeBody(
             userCode = login.userCode,
             verificationUri = login.verificationUri,
@@ -25,7 +26,7 @@ internal fun XaiLoginDialog(login: XaiLogin, onCancel: () -> Unit) {
 /** 截图验证用：与对话框共用 [DeviceCodeBody]。 */
 @Composable
 internal fun XaiLoginCardPreview(login: XaiLogin) {
-    OAuthLoginCardPreview(title = "登录 Grok") {
+    OAuthLoginCardPreview(title = "登录 Grok", titleProviderId = Provider.XAI.id) {
         DeviceCodeBody(
             userCode = login.userCode,
             verificationUri = login.verificationUri,
