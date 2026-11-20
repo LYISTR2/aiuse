@@ -55,9 +55,9 @@ internal object XaiVendor : Vendor {
 
         if (usedPercent != null && usedPercent in 0.0..100.0) {
             val periodLabel = when {
-                period?.contains("WEEKLY", true) == true -> "周额度"
-                period?.contains("MONTHLY", true) == true -> "月额度"
-                else -> "额度"
+                period?.contains("WEEKLY", true) == true -> "SuperGrok 周额度"
+                period?.contains("MONTHLY", true) == true -> "SuperGrok 月额度"
+                else -> "SuperGrok 额度"
             }
             metrics += Metric(
                 label = periodLabel,
@@ -71,7 +71,7 @@ internal object XaiVendor : Vendor {
             )
         }
 
-        // 2) 分产品用量：productUsage[] 里 GrokBuild / GrokChat 各自百分比
+        // 2) 分产品用量：只展示接口返回的 productUsage[]，label 按代号驼峰拆词，不补缺失项
         (config["productUsage"] as? JsonArray)?.forEach { el ->
             val o = el as? JsonObject ?: return@forEach
             val product = o["product"]?.jsonPrimitive?.content ?: return@forEach
@@ -119,12 +119,12 @@ internal object XaiVendor : Vendor {
         return UsageResult(metrics = metrics)
     }
 
-    /** 产品标识转可读名。 */
-    private fun productLabel(product: String): String = when (product) {
-        "GrokBuild" -> "SuperGrok"
-        "GrokChat" -> "Grok Bot"
-        else -> product
-    }
+    /**
+     * 接口没有文档，label 只把 product 代号按驼峰拆词，不另起名字。
+     * 例如 GrokBuild → Grok Build，GrokChat → Grok Chat；未知代号同一规则。
+     */
+    private fun productLabel(product: String): String =
+        product.replace(Regex("""(?<=\p{Ll})(?=\p{Lu})"""), " ")
 
     /** ISO8601（如 2026-08-15T01:53:09+00:00）→ MM-dd。 */
     private fun shortDate(iso: String): String =

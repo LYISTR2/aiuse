@@ -113,7 +113,7 @@ xai
     Authorization: Bearer sk-test-token-1234567890
     x-xai-token-auth: xai-grok-cli
     Accept: application/json
-  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[Metric(label=周额度, balanceMinor=null, currency=null, usedPercent=12.5, quotaMinor=null, note=已用 12% · 11-20 重置), Metric(label=SuperGrok, balanceMinor=null, currency=null, usedPercent=20.0, quotaMinor=null, note=已用 20%), Metric(label=预付, balanceMinor=500, currency=USD, usedPercent=null, quotaMinor=null, note=null), Metric(label=按量, balanceMinor=750, currency=USD, usedPercent=null, quotaMinor=1000, note=null)])
+  => UsageResult(balanceMinor=null, currency=null, usedTokens=null, quotaTokens=null, note=null, error=null, metrics=[Metric(label=SuperGrok 周额度, balanceMinor=null, currency=null, usedPercent=12.5, quotaMinor=null, note=已用 12% · 11-20 重置), Metric(label=Grok Build, balanceMinor=null, currency=null, usedPercent=20.0, quotaMinor=null, note=已用 20%), Metric(label=预付, balanceMinor=500, currency=USD, usedPercent=null, quotaMinor=null, note=null), Metric(label=按量, balanceMinor=750, currency=USD, usedPercent=null, quotaMinor=1000, note=null)])
  [empty]
   GET https://cli-chat-proxy.grok.com/v1/billing?format=credits
     Authorization: Bearer sk-test-token-1234567890

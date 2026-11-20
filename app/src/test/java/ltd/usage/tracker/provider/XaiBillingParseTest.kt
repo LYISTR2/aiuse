@@ -12,7 +12,8 @@ import org.junit.Test
  * xAI billing 响应解析测试。
  *
  * 用例取自真实的 `cli-chat-proxy.grok.com/v1/billing?format=credits` 响应结构
- * （SuperGrok 周额度池 + productUsage 分产品用量）。
+ * （总额度池 + productUsage 分产品用量）。
+ * 接口没有文档，label 只反映接口代号（驼峰拆词），不另起「Grok Bot」这类名字。
  * 这些测试锁住字段名与语义，防止升级时静默解析失败。
  */
 class XaiBillingParseTest {
@@ -40,16 +41,20 @@ class XaiBillingParseTest {
         assertNull(r.error)
         assertTrue("should expose multiple metrics", r.metrics.size >= 3)
 
-        val weekly = r.metrics.first { it.label == "周额度" }
+        val weekly = r.metrics.first { it.label == "SuperGrok 周额度" }
         // creditUsagePercent 是「已用」，不是剩余
         assertEquals(100.0, weekly.usedPercent!!, 0.001)
         assertEquals("已用 100% · 08-15 重置", weekly.note)
 
-        val superGrok = r.metrics.first { it.label == "SuperGrok" }
-        assertEquals(100.0, superGrok.usedPercent!!, 0.001)
+        // 接口没有文档，label 只反映代号：GrokBuild → Grok Build，不再映射成 SuperGrok
+        val build = r.metrics.first { it.label == "Grok Build" }
+        assertEquals(100.0, build.usedPercent!!, 0.001)
 
-        val bot = r.metrics.first { it.label == "Grok Bot" }
-        assertEquals(42.0, bot.usedPercent!!, 0.001)
+        // GrokChat 按同一规则显示为 Grok Chat；不要再出现「Grok Bot」
+        val chat = r.metrics.first { it.label == "Grok Chat" }
+        assertEquals(42.0, chat.usedPercent!!, 0.001)
+        assertTrue(r.metrics.none { it.label == "Grok Bot" })
+        assertTrue(r.metrics.none { it.label == "SuperGrok" })
     }
 
     @Test
@@ -65,7 +70,7 @@ class XaiBillingParseTest {
     fun `monthly period is labelled monthly`() {
         val body = fullResponse.replace("USAGE_PERIOD_TYPE_WEEKLY", "USAGE_PERIOD_TYPE_MONTHLY")
         val r = XaiVendor.parse(body)
-        assertNotNull(r.metrics.firstOrNull { it.label == "月额度" })
+        assertNotNull(r.metrics.firstOrNull { it.label == "SuperGrok 月额度" })
     }
 
     @Test
@@ -80,7 +85,7 @@ class XaiBillingParseTest {
         val r = XaiVendor.parse(body)
         assertNull(r.error)
         assertEquals(1, r.metrics.size)
-        assertEquals("SuperGrok", r.metrics[0].label)
+        assertEquals("Grok Build", r.metrics[0].label)
         assertEquals(30.0, r.metrics[0].usedPercent!!, 0.001)
     }
 

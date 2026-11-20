@@ -184,9 +184,9 @@ class ScreenshotTest {
                 accountId = "a1",
                 capturedAt = now,
                 metrics = listOf(
-                    Metric("周额度", usedPercent = 100.0, note = "已用 100% · 08-15 重置"),
-                    Metric("SuperGrok", usedPercent = 100.0, note = "已用 100%"),
-                    Metric("Grok Bot", usedPercent = 42.0, note = "已用 42%"),
+                    Metric("SuperGrok 周额度", usedPercent = 100.0, note = "已用 100% · 08-15 重置"),
+                    Metric("Grok Build", usedPercent = 100.0, note = "已用 100%"),
+                    Metric("Grok Chat", usedPercent = 42.0, note = "已用 42%"),
                     Metric("按量", balanceMinor = 2_000, currency = "USD", note = "上限 $20.00"),
                 ),
             ),
