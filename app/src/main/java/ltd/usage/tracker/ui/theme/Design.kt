@@ -17,22 +17,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import ltd.usage.tracker.R
 
-/**
- * 应用色：Material colorScheme 加警告扩展色。
- * 原先 MonoColors 的角色都映射到方案角色，调用点仍写 Palette.xxx，避免一次改完所有引用。
- */
 data class AppColors(
     val isDark: Boolean,
     val scheme: ColorScheme,
     val warning: WarningColors,
 ) {
     val Bg: Color get() = scheme.background
-    val Surface: Color get() = scheme.surface
+    val Surface: Color get() = scheme.surfaceContainer
     val SurfaceHover: Color get() = scheme.surfaceContainerHigh
     val Divider: Color get() = scheme.outlineVariant
     val TextPrimary: Color get() = scheme.onSurface
     val TextSecondary: Color get() = scheme.onSurfaceVariant
-    /** 第三级灰用 outline，和 onSurface / onSurfaceVariant 凑齐三级。 */
     val TextTertiary: Color get() = scheme.outline
     val Accent: Color get() = scheme.primary
     val Positive: Color get() = scheme.tertiary
@@ -64,29 +59,20 @@ val ColorScheme.warningContainer: Color
 val ColorScheme.onWarningContainer: Color
     @Composable @ReadOnlyComposable get() = LocalAppColors.current.warning.onWarningContainer
 
-/**
- * 排版尺寸。金额改走 [SummaryNumberStyle] / [CardNumberStyle]；
- * 其余仍用这些常量，避免一次改完所有中文字号。
- */
 object Type {
     const val DisplaySize = 28f
     const val TitleSize = 15f
-    const val BodySize = 13f
+    const val BodySize = 14f
     const val CaptionSize = 12f
     const val LabelSize = 11f
     const val MicroSize = 10f
     const val HeadlineSize = 22f
-    const val SheetTitleSize = 17f
+    const val SheetTitleSize = 18f
     const val PlaceholderSize = 18f
     const val CaptionLineHeight = 18f
-    const val LabelLineHeight = 15f
+    const val LabelLineHeight = 16f
 }
 
-/**
- * Roboto Flex 可变字体，只用于数字，中文仍走系统 Noto Sans CJK。
- * Compose 1.13 把 fontVariationSettings 从 TextStyle 挪到了 Font 上，
- * 所以不同字重/宽度要做成不同的 FontFamily，不能靠 TextStyle.copy。
- */
 private fun robotoFlexFamily(weight: Int, width: Float = 100f): FontFamily = FontFamily(
     Font(
         resId = R.font.roboto_flex,
@@ -100,39 +86,30 @@ private fun robotoFlexFamily(weight: Int, width: Float = 100f): FontFamily = Fon
 
 val RobotoFlexFamily: FontFamily = robotoFlexFamily(400)
 
-/** 等宽数字，避免刷新时位数跳动。 */
 val NumberStyle = TextStyle(
     fontFamily = RobotoFlexFamily,
     fontFeatureSettings = "tnum",
 )
 
-/** 汇总金额：40sp / wght 600 / wdth 108，等宽数字。 */
 val SummaryNumberStyle = TextStyle(
-    fontFamily = robotoFlexFamily(600, 108f),
+    fontFamily = robotoFlexFamily(700, 104f),
     fontFeatureSettings = "tnum",
-    fontSize = 40.sp,
-    fontWeight = FontWeight(600),
-    letterSpacing = (-0.8).sp,
+    fontSize = 38.sp,
+    fontWeight = FontWeight(700),
+    letterSpacing = (-1.0).sp,
 )
 
-/** 卡片金额：titleLarge 22sp / wght 600。 */
 val CardNumberStyle = TextStyle(
     fontFamily = robotoFlexFamily(600),
     fontFeatureSettings = "tnum",
-    fontSize = 22.sp,
+    fontSize = 21.sp,
     fontWeight = FontWeight(600),
-    letterSpacing = (-0.2).sp,
+    letterSpacing = (-0.3).sp,
 )
 
-/**
- * 动效 —— 取自 Material 3 Expressive 官方规范。
- *
- * 令牌数值保持不变：位移用 Spatial fast（damping 0.6 / stiffness 800），
- * 淡入用 Effects fast（1.0 / 3800）。全局另有 MotionScheme.expressive()。
- */
 object Motion {
     fun <T> spatialFast(): FiniteAnimationSpec<T> =
-        spring(dampingRatio = 0.6f, stiffness = 800f)
+        spring(dampingRatio = 0.72f, stiffness = 800f)
 
     fun <T> spatialDefault(): FiniteAnimationSpec<T> =
         spring(dampingRatio = 0.8f, stiffness = 380f)
@@ -146,7 +123,6 @@ object Motion {
     val Emphasized = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 }
 
-/** 额度语义档：阈值写在这里，UI 和测试共用，避免两处各写一遍。 */
 enum class UsageLevel { NORMAL, WARNING, CRITICAL }
 
 fun usageLevel(fraction: Float): UsageLevel = when {

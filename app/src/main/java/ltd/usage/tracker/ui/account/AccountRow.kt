@@ -2,6 +2,7 @@ package ltd.usage.tracker.ui.account
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -20,7 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -28,24 +29,19 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
-import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,16 +58,17 @@ import ltd.usage.tracker.ui.format.metricCaption
 import ltd.usage.tracker.ui.format.providerLabelOrNull
 import ltd.usage.tracker.ui.theme.CardNumberStyle
 import ltd.usage.tracker.ui.theme.Motion
-import ltd.usage.tracker.ui.theme.NumberStyle
-import ltd.usage.tracker.ui.theme.Palette
+import ltd.usage.tracker.ui.theme.ProviderMarkBadge
 import ltd.usage.tracker.ui.theme.RollingNumber
 import ltd.usage.tracker.ui.theme.Type
-import ltd.usage.tracker.ui.theme.ProviderMarkBadge
+import ltd.usage.tracker.ui.theme.UsageLevel
+import ltd.usage.tracker.ui.theme.onWarningContainer
 import ltd.usage.tracker.ui.theme.rememberReduceMotion
+import ltd.usage.tracker.ui.theme.usageLevel
+import ltd.usage.tracker.ui.theme.warningContainer
 
 /**
  * 账号只有一个指标、并且右上角显示的正是它时返回该指标。
- * 右上角规则见 RowTrailing：有总余额显示余额，否则显示已用最高的百分比。
  */
 internal fun singleHeadlineMetric(snapshot: UsageSnapshot?): Metric? {
     if (snapshot == null || snapshot.error != null) return null
@@ -85,6 +82,7 @@ internal fun singleHeadlineMetric(snapshot: UsageSnapshot?): Metric? {
     return m.takeIf { shown }
 }
 
+/** 保留供 ExpressiveMappingTest 验证圆角映射规则。 */
 internal fun groupItemShape(
     index: Int,
     count: Int,
@@ -102,10 +100,9 @@ internal fun groupItemShape(
 }
 
 /**
- * 账号行：分组列表卡片。首尾 24dp 圆角，中间 6dp，项间隔 2dp。
- * 按压把 24dp 收到 12dp，不再用缩放。被拿起时变成 28dp 全圆角，tonal elevation +2。
+ * 账号卡片：独立圆角卡片 + 细描边，支持左滑删除、长按拖动排序和按压反馈。
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AccountRow(
     account: StoredAccount,
@@ -125,20 +122,31 @@ internal fun AccountRow(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val reduceMotion = rememberReduceMotion()
-    val largeCorner by animateDpAsState(
-        targetValue = if (pressed && !lifted && !reduceMotion) 12.dp else 24.dp,
+    val corner by animateDpAsState(
+        targetValue = when {
+            lifted -> 24.dp
+            pressed && !reduceMotion -> 14.dp
+            else -> 20.dp
+        },
         animationSpec = Motion.spatialFast(),
-        label = "pressCorner",
+        label = "cardCorner",
     )
-    val shape = groupItemShape(index, count, large = largeCorner, lifted = lifted)
+    val shape = RoundedCornerShape(corner)
     val scheme = MaterialTheme.colorScheme
-    val containerColor = if (lifted) scheme.surfaceContainerHigh else scheme.surfaceContainer
     val bg by animateColorAsState(
-        targetValue = containerColor,
+        targetValue = if (lifted) scheme.surfaceContainerHigh else scheme.surfaceContainer,
         animationSpec = Motion.effectsFast(),
-        label = "dragBg",
+        label = "cardBg",
     )
-    val elevation = if (lifted) 2.dp else 0.dp
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            lifted -> scheme.primary.copy(alpha = 0.55f)
+            needsRelogin || snapshot?.error != null -> scheme.error.copy(alpha = 0.35f)
+            else -> scheme.outlineVariant.copy(alpha = 0.75f)
+        },
+        animationSpec = Motion.effectsFast(),
+        label = "cardBorder",
+    )
 
     val latestOnDelete = rememberUpdatedState(onDelete)
     val dismissState = rememberSwipeToDismissBoxState(
@@ -154,7 +162,7 @@ internal fun AccountRow(
         }
     }
 
-    val bottomGap = if (index == count - 1) 0.dp else 2.dp
+    val bottomGap = if (index == count - 1) 0.dp else 10.dp
     Column(
         Modifier
             .fillMaxWidth()
@@ -180,7 +188,7 @@ internal fun AccountRow(
                             Icons.Outlined.Delete,
                             contentDescription = "删除",
                             tint = scheme.onErrorContainer,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(22.dp),
                         )
                     }
                 }
@@ -204,8 +212,9 @@ internal fun AccountRow(
                     },
                 shape = shape,
                 color = bg,
-                tonalElevation = elevation,
-                shadowElevation = 0.dp,
+                border = BorderStroke(1.dp, borderColor),
+                tonalElevation = if (lifted) 3.dp else 0.dp,
+                shadowElevation = if (lifted) 6.dp else 0.dp,
             ) {
                 AccountRowContent(
                     account = account,
@@ -219,11 +228,6 @@ internal fun AccountRow(
             }
         }
     }
-}
-
-@Composable
-private fun ProviderAvatar(providerId: String, accountName: String, providerName: String) {
-    ProviderMarkBadge(providerId, accountName, providerName)
 }
 
 @Composable
@@ -243,12 +247,18 @@ private fun AccountRowContent(
 
     Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            ProviderAvatar(account.providerId, account.name, providerName)
+            ProviderMarkBadge(
+                providerId = account.providerId,
+                accountName = account.name,
+                providerName = providerName,
+                size = 42.dp,
+                logoSize = 22.dp,
+            )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     account.name,
-                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = scheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -261,19 +271,28 @@ private fun AccountRowContent(
                         ?: snapshot?.note?.let { humanizeNote(it) }
                             ?.takeUnless { headlineCaption != null && isSameText(it, headlineCaption) }
                 }
-                if (providerLabel != null || detail != null) {
+                if (failed && detail != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = scheme.errorContainer.copy(alpha = 0.85f),
+                    ) {
+                        Text(
+                            detail,
+                            fontSize = Type.LabelSize.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = scheme.onErrorContainer,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                        )
+                    }
+                } else if (providerLabel != null || detail != null) {
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        buildAnnotatedString {
-                            providerLabel?.let { append(it) }
-                            if (providerLabel != null && detail != null) append(" · ")
-                            if (detail != null) {
-                                if (failed) withStyle(SpanStyle(color = scheme.error)) { append(detail) }
-                                else append(detail)
-                            }
-                        },
+                        listOfNotNull(providerLabel, detail).joinToString(" · "),
                         fontSize = Type.LabelSize.sp,
-                        color = scheme.outline,
+                        color = scheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -289,7 +308,13 @@ private fun AccountRowContent(
 
         val metrics = snapshot?.metrics.orEmpty()
         if (metrics.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
+            if (headline == null) {
+                Spacer(Modifier.height(10.dp))
+                HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.55f), thickness = 0.75.dp)
+                Spacer(Modifier.height(6.dp))
+            } else {
+                Spacer(Modifier.height(10.dp))
+            }
             metrics.forEach { m ->
                 MetricRow(
                     m = m,
@@ -309,11 +334,12 @@ private fun RowTrailing(
     reduceMotion: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val scheme = MaterialTheme.colorScheme
     when {
         snapshot?.error != null -> Text(
             "—",
             style = CardNumberStyle,
-            color = MaterialTheme.colorScheme.outline,
+            color = scheme.outline,
             modifier = modifier,
         )
         snapshot?.balanceMinor != null -> {
@@ -324,14 +350,15 @@ private fun RowTrailing(
                 RollingNumber(
                     text = formatMoney(shown),
                     style = CardNumberStyle,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = scheme.onSurface,
                     reduceMotion = reduceMotion,
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
                     displayCurrency,
                     fontSize = Type.MicroSize.sp,
-                    color = MaterialTheme.colorScheme.outline,
+                    fontWeight = FontWeight.Medium,
+                    color = scheme.outline,
                     modifier = Modifier.padding(bottom = 2.dp),
                 )
             }
@@ -341,19 +368,31 @@ private fun RowTrailing(
                 .filter { it.usedPercent != null }
                 .maxByOrNull { it.usedPercent!! }
             if (tightest != null) {
-                val left = (100.0 - tightest.usedPercent!!).coerceIn(0.0, 100.0)
-                RollingNumber(
-                    text = "剩 ${left.toInt()}%",
-                    style = CardNumberStyle,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    reduceMotion = reduceMotion,
+                val usedFraction = (tightest.usedPercent!! / 100.0).coerceIn(0.0, 1.0).toFloat()
+                val left = (100.0 - tightest.usedPercent).coerceIn(0.0, 100.0)
+                val (pillBg, pillFg) = when (usageLevel(usedFraction)) {
+                    UsageLevel.CRITICAL -> scheme.errorContainer to scheme.onErrorContainer
+                    UsageLevel.WARNING -> scheme.warningContainer to scheme.onWarningContainer
+                    UsageLevel.NORMAL -> scheme.secondaryContainer.copy(alpha = 0.7f) to scheme.onSecondaryContainer
+                }
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = pillBg,
                     modifier = modifier,
-                )
+                ) {
+                    RollingNumber(
+                        text = "剩 ${left.toInt()}%",
+                        style = CardNumberStyle.copy(fontSize = 16.sp),
+                        color = pillFg,
+                        reduceMotion = reduceMotion,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
+                }
             } else {
                 Text(
                     "无数据",
                     fontSize = Type.CaptionSize.sp,
-                    color = MaterialTheme.colorScheme.outline,
+                    color = scheme.outline,
                     modifier = modifier,
                 )
             }

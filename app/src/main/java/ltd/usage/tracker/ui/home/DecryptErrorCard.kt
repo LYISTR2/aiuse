@@ -1,5 +1,6 @@
 package ltd.usage.tracker.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,8 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import ltd.usage.tracker.ui.theme.Type
 import androidx.compose.ui.unit.sp
+import ltd.usage.tracker.ui.theme.Type
 
 internal const val DECRYPT_ERROR_MESSAGE =
     "本机保存的登录信息无法解密，可能是系统重置了密钥。账号列表还在，请重新登录或填写 API Key。"
@@ -33,10 +34,10 @@ internal fun DecryptErrorCard() {
             .fillMaxWidth()
             .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
             .testTag("decryptErrorCard"),
-        // 与分组列表首项一致：顶部 24dp、底部 6dp
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 6.dp, bottomEnd = 6.dp),
+        shape = RoundedCornerShape(18.dp),
         color = scheme.errorContainer,
         contentColor = scheme.onErrorContainer,
+        border = BorderStroke(1.dp, scheme.error.copy(alpha = 0.35f)),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
     ) {
@@ -47,7 +48,7 @@ internal fun DecryptErrorCard() {
             Icon(
                 Icons.Outlined.ErrorOutline,
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(22.dp),
                 tint = scheme.onErrorContainer,
             )
             Spacer(Modifier.width(12.dp))

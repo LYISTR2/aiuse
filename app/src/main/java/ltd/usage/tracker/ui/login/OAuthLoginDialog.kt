@@ -1,16 +1,49 @@
 package ltd.usage.tracker.ui.login
 
-import androidx.compose.runtime.*
-import androidx.compose.material3.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.OpenInBrowser
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -18,32 +51,24 @@ import androidx.compose.ui.window.DialogProperties
 import ltd.usage.tracker.data.Provider
 import ltd.usage.tracker.ui.OAuthLogin
 import ltd.usage.tracker.ui.theme.ProviderLogoImage
-import ltd.usage.tracker.ui.theme.Palette
+import ltd.usage.tracker.ui.theme.RobotoFlexFamily
 import ltd.usage.tracker.ui.theme.Type
-
-// ---------------------------------------------------------------- 通用 OAuth 登录对话框
-//
-// 1.8.0 从 XaiLoginDialog 抽出：外壳（标题 + 正文 + 按钮）与两种正文：
-//  - [DeviceCodeBody]：设备码（xAI、ChatGPT）
-//  - [PasteCodeBody]：打开授权页 → 粘贴授权码（Claude）
-
 
 @Composable
 private fun LoginTitle(title: String, titleProviderId: String?) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (titleProviderId != null) {
-            ProviderLogoImage(providerId = titleProviderId, size = 20.dp)
-            Spacer(Modifier.width(8.dp))
+            ProviderLogoImage(providerId = titleProviderId, size = 22.dp)
+            Spacer(Modifier.width(10.dp))
         }
-        Text(title, fontSize = Type.SheetTitleSize.sp, fontWeight = FontWeight.SemiBold, color = Palette.TextPrimary)
+        Text(
+            title,
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 
-/**
- * 对话框外壳。[confirm] 为 null 时只有一个「取消」按钮（xAI / 设备码，1.7.1 原样）；
- * 否则 [confirm] 放主按钮位，「取消」放次按钮位。
- * [dismissOnOutside] 为 false 时点外面不关闭：粘贴模式下误触外侧会丢掉这次登录。
- */
 @Composable
 internal fun OAuthLoginDialog(
     title: String,
@@ -53,29 +78,24 @@ internal fun OAuthLoginDialog(
     confirm: (@Composable () -> Unit)? = null,
     body: @Composable () -> Unit,
 ) {
+    val scheme = MaterialTheme.colorScheme
     val cancelButton: @Composable () -> Unit = {
         TextButton(onClick = onCancel) {
-            Text("取消", color = Palette.TextSecondary, fontSize = Type.BodySize.sp)
+            Text("取消", color = scheme.onSurfaceVariant, fontSize = Type.BodySize.sp)
         }
     }
     AlertDialog(
         onDismissRequest = onCancel,
-        containerColor = Palette.Surface,
-        shape = RoundedCornerShape(28.dp),
+        containerColor = scheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(26.dp),
         properties = DialogProperties(dismissOnClickOutside = dismissOnOutside),
-        title = {
-            LoginTitle(title, titleProviderId)
-        },
+        title = { LoginTitle(title, titleProviderId) },
         text = body,
         confirmButton = confirm ?: cancelButton,
         dismissButton = if (confirm != null) cancelButton else null,
     )
 }
 
-/**
- * 截图验证用的内联卡片：AlertDialog 在独立 Window 上，截图抓不到，
- * 这里用同一份正文画在页面里。[buttons] 给粘贴模式画底部按钮行。
- */
 @Composable
 internal fun OAuthLoginCardPreview(
     title: String,
@@ -83,29 +103,27 @@ internal fun OAuthLoginCardPreview(
     titleProviderId: String? = null,
     body: @Composable () -> Unit,
 ) {
+    val scheme = MaterialTheme.colorScheme
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(28.dp))
-                .background(Palette.Surface)
-                .padding(20.dp),
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(26.dp),
+            color = scheme.surfaceContainerHigh,
+            border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.7f)),
         ) {
-            LoginTitle(title, titleProviderId)
-            Spacer(Modifier.height(10.dp))
-            body()
-            if (buttons != null) {
-                Spacer(Modifier.height(16.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, content = buttons)
+            Column(Modifier.padding(22.dp)) {
+                LoginTitle(title, titleProviderId)
+                Spacer(Modifier.height(12.dp))
+                body()
+                if (buttons != null) {
+                    Spacer(Modifier.height(18.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, content = buttons)
+                }
             }
         }
     }
 }
 
-/**
- * 设备码正文：码框 + 授权地址 + 打开 / 复制 + 等待状态。
- * xAI 与 ChatGPT 共用；[hint] 为 null 时与 1.7.1 的 xAI 正文完全一致。
- */
 @Composable
 internal fun DeviceCodeBody(
     userCode: String,
@@ -115,76 +133,74 @@ internal fun DeviceCodeBody(
     onCopy: () -> Unit,
     hint: String? = null,
 ) {
+    val scheme = MaterialTheme.colorScheme
     Column {
         if (userCode.isBlank()) {
-            // 尚未拿到设备码：只显示进度，不显示空的码框
             Row(verticalAlignment = Alignment.CenterVertically) {
                 WaitingSpinner()
-                Spacer(Modifier.width(8.dp))
-                Text(status, fontSize = Type.CaptionSize.sp, color = Palette.TextTertiary)
+                Spacer(Modifier.width(10.dp))
+                Text(status, fontSize = Type.CaptionSize.sp, color = scheme.onSurfaceVariant)
             }
             return@Column
         }
 
         Text(
-            "在浏览器打开下面的地址，输入设备码：",
+            "在浏览器打开下方地址，输入设备码完成授权：",
             fontSize = Type.CaptionSize.sp,
-            color = Palette.TextSecondary,
+            color = scheme.onSurfaceVariant,
             lineHeight = Type.CaptionLineHeight.sp,
         )
         Spacer(Modifier.height(14.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-                .padding(vertical = 16.dp),
-            contentAlignment = Alignment.Center,
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = scheme.primaryContainer,
+            border = BorderStroke(1.dp, scheme.primary.copy(alpha = 0.25f)),
         ) {
-            Text(
-                userCode,
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontFamily = ltd.usage.tracker.ui.theme.RobotoFlexFamily,
-                    fontFeatureSettings = "tnum",
-                    letterSpacing = 3.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    userCode,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontFamily = RobotoFlexFamily,
+                        fontFeatureSettings = "tnum",
+                        letterSpacing = 3.5.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    color = scheme.onPrimaryContainer,
+                )
+            }
         }
 
         Spacer(Modifier.height(10.dp))
-        // 地址始终可见：即使无法唤起浏览器也能手动输入
         Text(
             verificationUri,
             fontSize = Type.LabelSize.sp,
-            color = Palette.TextSecondary,
+            color = scheme.outline,
             lineHeight = Type.LabelLineHeight.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(14.dp))
         OpenAndCopyButtons(onOpen = onOpen, onCopy = onCopy)
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             WaitingSpinner()
             Spacer(Modifier.width(8.dp))
-            Text(status, fontSize = Type.LabelSize.sp, color = Palette.TextTertiary)
+            Text(status, fontSize = Type.LabelSize.sp, color = scheme.onSurfaceVariant)
         }
         if (hint != null) {
             Spacer(Modifier.height(8.dp))
-            Text(hint, fontSize = Type.LabelSize.sp, color = Palette.TextTertiary, lineHeight = Type.LabelLineHeight.sp)
+            Text(hint, fontSize = Type.LabelSize.sp, color = scheme.outline, lineHeight = Type.LabelLineHeight.sp)
         }
     }
 }
 
-/**
- * 粘贴授权码正文（Claude）：说明 + 打开 / 复制授权地址 + 授权码输入框 + 状态 / 错误。
- * 输入框内容由调用方持有，主按钮「完成登录」在对话框按钮位。
- */
 @Composable
 internal fun PasteCodeBody(
     instruction: String,
@@ -196,119 +212,109 @@ internal fun PasteCodeBody(
     onOpen: () -> Unit,
     onCopy: () -> Unit,
 ) {
+    val scheme = MaterialTheme.colorScheme
+    var showCode by remember { mutableStateOf(false) }
+
     Column {
         Text(
             instruction,
             fontSize = Type.CaptionSize.sp,
-            color = Palette.TextSecondary,
+            color = scheme.onSurfaceVariant,
             lineHeight = Type.CaptionLineHeight.sp,
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(14.dp))
         OpenAndCopyButtons(onOpen = onOpen, onCopy = onCopy)
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = code,
             onValueChange = onCodeChange,
             label = { Text("授权码", fontSize = Type.CaptionSize.sp) },
-            placeholder = { Text("粘贴页面上的 code#state", fontSize = Type.CaptionSize.sp, color = Palette.TextTertiary) },
+            placeholder = { Text("粘贴页面上的 code#state", fontSize = Type.CaptionSize.sp) },
             singleLine = true,
             enabled = !submitting,
-            // 授权码一次性、几分钟内有效，但仍按密钥对待：不明文显示
-            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+            visualTransformation = if (showCode) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { showCode = !showCode }) {
+                    Icon(
+                        if (showCode) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                        contentDescription = if (showCode) "隐藏" else "显示",
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Palette.TextSecondary,
-                unfocusedBorderColor = Palette.Divider,
-                disabledBorderColor = Palette.Divider,
-                focusedTextColor = Palette.TextPrimary,
-                unfocusedTextColor = Palette.TextPrimary,
-                disabledTextColor = Palette.TextTertiary,
-                focusedLabelColor = Palette.TextSecondary,
-                unfocusedLabelColor = Palette.TextTertiary,
-                cursorColor = Palette.TextPrimary,
-            ),
+            shape = RoundedCornerShape(14.dp),
         )
 
         Spacer(Modifier.height(10.dp))
         when {
-            error != null -> Text(error, fontSize = Type.LabelSize.sp, color = Palette.Negative, lineHeight = Type.LabelLineHeight.sp)
+            error != null -> Text(error, fontSize = Type.LabelSize.sp, color = scheme.error, lineHeight = Type.LabelLineHeight.sp)
             submitting -> Row(verticalAlignment = Alignment.CenterVertically) {
                 WaitingSpinner()
                 Spacer(Modifier.width(8.dp))
-                Text(status, fontSize = Type.LabelSize.sp, color = Palette.TextTertiary)
+                Text(status, fontSize = Type.LabelSize.sp, color = scheme.onSurfaceVariant)
             }
-            else -> Text(status, fontSize = Type.LabelSize.sp, color = Palette.TextTertiary, lineHeight = Type.LabelLineHeight.sp)
+            else -> Text(status, fontSize = Type.LabelSize.sp, color = scheme.outline, lineHeight = Type.LabelLineHeight.sp)
         }
     }
 }
 
-/** 「打开授权页面」主按钮 + 「复制链接」文字按钮。 */
 @Composable
 private fun OpenAndCopyButtons(onOpen: () -> Unit, onCopy: () -> Unit) {
     Button(
         onClick = onOpen,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Palette.TextPrimary,
-            contentColor = Palette.Bg,
-        ),
-    ) { Text("打开授权页面", fontSize = Type.BodySize.sp, fontWeight = FontWeight.Medium) }
+        modifier = Modifier.fillMaxWidth().height(46.dp),
+        shape = RoundedCornerShape(14.dp),
+    ) {
+        Icon(Icons.Outlined.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text("打开授权页面", fontSize = Type.BodySize.sp, fontWeight = FontWeight.SemiBold)
+    }
 
-    Spacer(Modifier.height(6.dp))
-    TextButton(onClick = onCopy, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp)) {
-        Text("复制链接", fontSize = Type.CaptionSize.sp, color = Palette.TextSecondary)
+    Spacer(Modifier.height(8.dp))
+    OutlinedButton(
+        onClick = onCopy,
+        modifier = Modifier.fillMaxWidth().height(42.dp),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("复制链接", fontSize = Type.CaptionSize.sp, fontWeight = FontWeight.Medium)
     }
 }
 
-/** 「完成登录」主按钮（粘贴模式）。 */
 @Composable
 internal fun SubmitCodeButton(enabled: Boolean, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        shape = RoundedCornerShape(10.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Palette.TextPrimary,
-            contentColor = Palette.Bg,
-            disabledContainerColor = Palette.SurfaceHover,
-            disabledContentColor = Palette.TextTertiary,
-        ),
-    ) { Text("完成登录", fontSize = Type.BodySize.sp, fontWeight = FontWeight.Medium) }
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Text("完成登录", fontSize = Type.BodySize.sp, fontWeight = FontWeight.SemiBold)
+    }
 }
 
-/**
- * 等待中的小转圈。
- *
- * 12dp 时不确定进度的弧段很短，又没有底环，看上去像被裁掉的半个括号；
- * 改为 14dp 并画一圈分割线色的底环，任何时刻都能看出是完整的圆。
- */
-@OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun WaitingSpinner() {
-    androidx.compose.material3.LoadingIndicator(modifier = Modifier.size(20.dp))
+    LoadingIndicator(modifier = Modifier.size(20.dp))
 }
 
-// ---------------------------------------------------------------- 订阅登录（Claude / ChatGPT）
-
-/** 订阅登录的对话框标题。 */
 internal fun oauthTitle(login: OAuthLogin): String = if (login.pasteMode) "登录 Claude" else "登录 ChatGPT"
 
 internal const val CLAUDE_INSTRUCTION = "在浏览器登录 Claude 并授权，页面会显示一串授权码，复制后粘贴到下面："
 internal const val CHATGPT_HINT = "需要 Plus / Pro 订阅，并已在 ChatGPT 设置 → 安全 中开启 Codex 设备码授权。"
 
-/** Claude / ChatGPT 订阅登录对话框。 */
 @Composable
 internal fun SubscriptionLoginDialog(
     login: OAuthLogin,
     onSubmitCode: (String) -> Unit,
     onCancel: () -> Unit,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     if (login.pasteMode) {
-        // 切到浏览器再回来时 Activity 可能重建，输入内容用 rememberSaveable 保住
         var code by rememberSaveable { mutableStateOf("") }
         OAuthLoginDialog(
             title = oauthTitle(login),
@@ -342,7 +348,6 @@ internal fun SubscriptionLoginDialog(
     }
 }
 
-/** 截图验证用：与 [SubscriptionLoginDialog] 共用正文。 */
 @Composable
 internal fun SubscriptionLoginCardPreview(login: OAuthLogin, pastedCode: String = "") {
     if (login.pasteMode) {
@@ -350,7 +355,9 @@ internal fun SubscriptionLoginCardPreview(login: OAuthLogin, pastedCode: String 
             title = oauthTitle(login),
             titleProviderId = Provider.ANTHROPIC.id,
             buttons = {
-                TextButton(onClick = {}) { Text("取消", color = Palette.TextSecondary, fontSize = Type.BodySize.sp) }
+                TextButton(onClick = {}) {
+                    Text("取消", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = Type.BodySize.sp)
+                }
                 Spacer(Modifier.width(8.dp))
                 SubmitCodeButton(enabled = pastedCode.isNotBlank() && !login.submitting) {}
             },

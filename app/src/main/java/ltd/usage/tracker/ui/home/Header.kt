@@ -1,8 +1,10 @@
 package ltd.usage.tracker.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DarkMode
@@ -26,13 +28,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ltd.usage.tracker.ui.SortMode
 import ltd.usage.tracker.ui.theme.Type
-
-// ---------------------------------------------------------------- 顶栏操作
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -49,18 +50,27 @@ internal fun HeaderActions(
 ) {
     var sortMenu by remember { mutableStateOf(false) }
     var settingsMenu by remember { mutableStateOf(false) }
+    val scheme = MaterialTheme.colorScheme
 
     Box {
         IconButton(onClick = { sortMenu = true }) {
-            Icon(
-                Icons.Outlined.SwapVert,
-                contentDescription = "排序：${sortMode.label}",
-                tint = if (sortMode != SortMode.MANUAL) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
+            Box {
+                Icon(
+                    Icons.Outlined.SwapVert,
+                    contentDescription = "排序：${sortMode.label}",
+                    tint = if (sortMode != SortMode.MANUAL) scheme.primary else scheme.onSurfaceVariant,
+                )
+                if (sortMode != SortMode.MANUAL) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 2.dp, y = (-2).dp)
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(scheme.primary),
+                    )
+                }
+            }
         }
         DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
             SortMode.entries.forEach { mode ->
@@ -70,11 +80,12 @@ internal fun HeaderActions(
                             mode.label,
                             fontSize = Type.BodySize.sp,
                             fontWeight = if (mode == sortMode) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (mode == sortMode) scheme.primary else scheme.onSurface,
                         )
                     },
                     trailingIcon = {
                         if (mode == sortMode) {
-                            Icon(Icons.Outlined.Check, null, modifier = Modifier.size(15.dp))
+                            Icon(Icons.Outlined.Check, null, tint = scheme.primary, modifier = Modifier.size(16.dp))
                         }
                     },
                     onClick = {
@@ -85,24 +96,28 @@ internal fun HeaderActions(
             }
         }
     }
+
     IconButton(onClick = onToggleTheme) {
         Icon(
             if (dark) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
             contentDescription = if (dark) "切换浅色" else "切换深色",
+            tint = scheme.onSurfaceVariant,
         )
     }
+
     if (refreshing) {
         Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            LoadingIndicator(Modifier.size(24.dp))
+            LoadingIndicator(Modifier.size(22.dp))
         }
     } else {
         IconButton(onClick = onRefresh) {
-            Icon(Icons.Outlined.Refresh, contentDescription = "刷新")
+            Icon(Icons.Outlined.Refresh, contentDescription = "刷新", tint = scheme.onSurfaceVariant)
         }
     }
+
     Box {
         IconButton(onClick = { settingsMenu = true }) {
-            Icon(Icons.Outlined.Settings, contentDescription = "设置")
+            Icon(Icons.Outlined.Settings, contentDescription = "设置", tint = scheme.onSurfaceVariant)
         }
         DropdownMenu(expanded = settingsMenu, onDismissRequest = { settingsMenu = false }) {
             DropdownMenuItem(
@@ -115,15 +130,11 @@ internal fun HeaderActions(
                 trailingIcon = {
                     Switch(
                         checked = dynamicColor && dynamicColorAvailable,
-                        onCheckedChange = {
-                            if (dynamicColorAvailable) onDynamicColorChange(it)
-                        },
+                        onCheckedChange = { if (dynamicColorAvailable) onDynamicColorChange(it) },
                         enabled = dynamicColorAvailable,
                     )
                 },
-                onClick = {
-                    if (dynamicColorAvailable) onDynamicColorChange(!dynamicColor)
-                },
+                onClick = { if (dynamicColorAvailable) onDynamicColorChange(!dynamicColor) },
             )
         }
     }

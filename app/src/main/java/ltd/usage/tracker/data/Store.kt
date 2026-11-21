@@ -1,6 +1,8 @@
 package ltd.usage.tracker.data
 
 import android.content.Context
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
@@ -8,17 +10,6 @@ import kotlinx.serialization.json.Json
 import ltd.usage.tracker.crypto.CredentialCipher
 import java.io.File
 
-/**
- * 持久层。
- *
- * 布局（filesDir/store/）：
- *   accounts.json     明文，仅元数据（id/provider/name/时间）
- *   credentials.bin   AES-GCM 加密的凭据
- *   snapshots.json    明文，用量历史
- *   settings.json     明文，设置
- *
- * 元数据与密钥物理分离：即使 accounts.json 泄露也拿不到凭据。
- */
 /**
  * 凭据读取结果：把「还没有凭据文件」和「文件在但解不开」分开，
  * 避免解密失败时被当成空库再写回去。
@@ -29,13 +20,15 @@ sealed class CredentialState {
     data object Undecryptable : CredentialState()
 }
 
+/**
+ * 持久层（filesDir/store/）：元数据明文与凭据密文物理分离。
+ */
 class Store(
     context: Context,
     private val encrypt: (ByteArray) -> ByteArray = CredentialCipher::encrypt,
     private val decrypt: (ByteArray) -> ByteArray = CredentialCipher::decrypt,
     private val nowMs: () -> Long = { System.currentTimeMillis() },
 ) {
-
     private val root: File = File(context.filesDir, "store").apply { mkdirs() }
     private val json = Json {
         ignoreUnknownKeys = true
@@ -51,27 +44,26 @@ class Store(
 
     private fun file(name: String) = File(root, name)
 
+    private fun <T> readJson(name: String, serializer: KSerializer<T>, default: T): T {
+        val f = file(name)
+        if (!f.exists()) return default
+        return runCatching { json.decodeFromString(serializer, f.readText()) }.getOrDefault(default)
+    }
+
+    private fun <T> writeJson(name: String, serializer: KSerializer<T>, value: T) = synchronized(lock) {
+        writeAtomicBytes(name, json.encodeToString(serializer, value).encodeToByteArray())
+    }
+
     // ---------- 账号元数据 ----------
 
-    fun loadAccounts(): List<StoredAccount> {
-        val f = file("accounts.json")
-        if (!f.exists()) return emptyList()
-        return runCatching { json.decodeFromString(accountsSerializer, f.readText()) }
-            .getOrDefault(emptyList())
-    }
+    fun loadAccounts(): List<StoredAccount> = readJson("accounts.json", accountsSerializer, emptyList())
 
-    fun saveAccounts(accounts: List<StoredAccount>) = synchronized(lock) {
-        writeAtomic("accounts.json", json.encodeToString(accountsSerializer, accounts))
-    }
+    fun saveAccounts(accounts: List<StoredAccount>) = writeJson("accounts.json", accountsSerializer, accounts)
 
     // ---------- 凭据（加密） ----------
 
-    /** 可读时返回映射；缺失或解不开时返回空 Map，不会写盘。写路径请用 [loadCredentialState] / [putCredential]。 */
     fun loadCredentials(): Map<String, Credential> =
-        when (val s = loadCredentialState()) {
-            is CredentialState.Available -> s.credentials
-            is CredentialState.Missing, is CredentialState.Undecryptable -> emptyMap()
-        }
+        (loadCredentialState() as? CredentialState.Available)?.credentials.orEmpty()
 
     fun loadCredentialState(): CredentialState = synchronized(lock) { loadCredentialStateLocked() }
 
@@ -89,37 +81,21 @@ class Store(
         }
     }
 
-    /**
-     * 写入完整映射。若当前密文已经解不开，先备份再写，避免把原文件静默覆盖成空库。
-     */
     fun saveCredentials(creds: Map<String, Credential>) = synchronized(lock) {
-        if (loadCredentialStateLocked() is CredentialState.Undecryptable) {
-            // load 里已经做过备份
-        }
+        // 若当前密文解不开，先通过 loadCredentialStateLocked() 备份原文件，再写入
+        loadCredentialStateLocked()
         writeCredentialsLocked(creds)
     }
 
-    /**
-     * 写入或更新一条凭据。当前文件可读则与已有条目合并；
-     * 解不开时先备份原文件，再只写入这一条（以及其他已经恢复、写在新文件里的条目）。
-     */
     fun putCredential(id: String, cred: Credential) = synchronized(lock) {
-        val base = when (val s = loadCredentialStateLocked()) {
-            is CredentialState.Available -> s.credentials
-            is CredentialState.Missing -> emptyMap()
-            is CredentialState.Undecryptable -> emptyMap()
-        }
+        val base = (loadCredentialStateLocked() as? CredentialState.Available)?.credentials.orEmpty()
         writeCredentialsLocked(base + (id to cred))
     }
 
-    /**
-     * 删除一条凭据。密文解不开时只保留备份，不把空映射写回原文件。
-     */
     fun removeCredential(id: String) = synchronized(lock) {
-        when (val s = loadCredentialStateLocked()) {
-            is CredentialState.Available -> writeCredentialsLocked(s.credentials - id)
-            is CredentialState.Missing -> Unit
-            is CredentialState.Undecryptable -> Unit
+        val state = loadCredentialStateLocked()
+        if (state is CredentialState.Available) {
+            writeCredentialsLocked(state.credentials - id)
         }
     }
 
@@ -131,10 +107,6 @@ class Store(
         writeAtomicBytes(CREDENTIALS_FILE, encrypt(plain))
     }
 
-    /**
-     * 把当前 credentials.bin 复制为 credentials.bin.corrupt-<时间戳>，只留最新一份。
-     * 原文件不动：在用户写入新凭据之前，损坏密文还在原位。
-     */
     private fun backupCorruptLocked() {
         val src = file(CREDENTIALS_FILE)
         if (!src.exists()) return
@@ -143,41 +115,23 @@ class Store(
         root.listFiles()?.filter { it.name.startsWith(CORRUPT_PREFIX) && it != dest }?.forEach { it.delete() }
     }
 
-    fun listCorruptBackups(): List<File> =
-        synchronized(lock) {
-            root.listFiles()?.filter { it.name.startsWith(CORRUPT_PREFIX) }?.sortedBy { it.name }.orEmpty()
-        }
+    fun listCorruptBackups(): List<File> = synchronized(lock) {
+        root.listFiles()?.filter { it.name.startsWith(CORRUPT_PREFIX) }?.sortedBy { it.name }.orEmpty()
+    }
 
     // ---------- 用量快照 ----------
 
-    fun loadSnapshots(): List<UsageSnapshot> {
-        val f = file("snapshots.json")
-        if (!f.exists()) return emptyList()
-        return runCatching { json.decodeFromString(snapshotsSerializer, f.readText()) }
-            .getOrDefault(emptyList())
-    }
+    fun loadSnapshots(): List<UsageSnapshot> = readJson("snapshots.json", snapshotsSerializer, emptyList())
 
-    fun saveSnapshots(list: List<UsageSnapshot>) = synchronized(lock) {
-        writeAtomic("snapshots.json", json.encodeToString(snapshotsSerializer, list))
-    }
+    fun saveSnapshots(list: List<UsageSnapshot>) = writeJson("snapshots.json", snapshotsSerializer, list)
 
     // ---------- 设置 ----------
 
-    fun loadSettings(): Map<String, String> {
-        val f = file("settings.json")
-        if (!f.exists()) return emptyMap()
-        return runCatching { json.decodeFromString(settingsSerializer, f.readText()) }
-            .getOrDefault(emptyMap())
-    }
+    fun loadSettings(): Map<String, String> = readJson("settings.json", settingsSerializer, emptyMap())
 
-    fun saveSettings(settings: Map<String, String>) = synchronized(lock) {
-        writeAtomic("settings.json", json.encodeToString(settingsSerializer, settings))
-    }
+    fun saveSettings(settings: Map<String, String>) = writeJson("settings.json", settingsSerializer, settings)
 
     // ---------- 原子写 ----------
-
-    private fun writeAtomic(name: String, content: String) =
-        writeAtomicBytes(name, content.encodeToByteArray())
 
     private fun writeAtomicBytes(name: String, bytes: ByteArray) {
         val target = file(name)
@@ -189,13 +143,6 @@ class Store(
         }
     }
 
-    /**
-     * 清除全部本地数据。
-     *
-     * 删密钥失败不能阻断文件清理：文件已经删了，若再抛异常，
-     * 用户会看到「清除失败」却找不到残留文件。密钥删除失败只意味着
-     * 密文可能仍被旧密钥保护，但密文本身已随文件一起删除。
-     */
     fun wipe() = synchronized(lock) {
         root.listFiles()?.forEach { it.deleteRecursively() }
         runCatching { CredentialCipher.deleteKey() }
@@ -209,7 +156,7 @@ class Store(
     }
 }
 
-@kotlinx.serialization.Serializable
+@Serializable
 internal data class CredentialDto(
     val token: String,
     val refreshToken: String? = null,

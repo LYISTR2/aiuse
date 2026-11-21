@@ -1,5 +1,11 @@
 package ltd.usage.tracker.provider
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -7,6 +13,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import ltd.usage.tracker.provider.vendors.httpClient
+import ltd.usage.tracker.provider.vendors.sharedJson
 import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
@@ -16,13 +24,6 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
 
-/**
- * Claude / ChatGPT 订阅登录共用的 OAuth 工具（PKCE、JWT 读取、令牌端点请求）。
- *
- * 两家都是公开 PKCE 客户端（无 client secret），client_id 取自各自官方 CLI，见 [ClaudeOAuth] / [CodexOAuth]。
- * 请求走 vendors 包里的 httpClient，测试可以换成拦截器核对请求体。
- */
-
 /** 令牌端点返回的结果。[expiresIn] 单位秒；[idToken] 只有 OpenAI 会给。 */
 data class OAuthTokens(
     val accessToken: String,
@@ -30,12 +31,11 @@ data class OAuthTokens(
     val expiresIn: Long,
     val idToken: String? = null,
 ) {
-    // 与 Credential 一样脱敏，防止日志里出现令牌原文
     override fun toString(): String =
         "OAuthTokens(accessToken=***(${accessToken.length}), refreshToken=${refreshToken?.let { "***(${it.length})" }}, expiresIn=$expiresIn)"
 }
 
-/** PKCE 参数。verifier 为 64 字节随机数的 base64url（与 Claude Code / Codex 一致的长度量级）。 */
+/** PKCE 参数。 */
 data class Pkce(val verifier: String, val challenge: String, val state: String) {
     companion object {
         private val rnd = SecureRandom()
@@ -57,17 +57,13 @@ data class Pkce(val verifier: String, val challenge: String, val state: String) 
 }
 
 internal object Jwt {
-    /**
-     * 读 JWT 载荷（不验签）。只用来取账号 id 与过期时间；令牌本身是经 TLS 直接从签发方拿到的。
-     * 格式不对返回 null。
-     */
+    /** 读 JWT 载荷（不验签），只用于提取账号 id 与过期时间。 */
     fun claims(jwt: String?): JsonObject? = runCatching {
         val part = jwt!!.split('.')[1]
         val padded = part.padEnd((part.length + 3) / 4 * 4, '=')
-        OAuthHttp.json.parseToJsonElement(String(Base64.getUrlDecoder().decode(padded))).jsonObject
+        sharedJson.parseToJsonElement(String(Base64.getUrlDecoder().decode(padded))).jsonObject
     }.getOrNull()
 
-    /** exp 声明（秒）。 */
     fun expSeconds(jwt: String?): Long? = claims(jwt)?.get("exp")?.jsonPrimitive?.longOrNull
 }
 
@@ -75,7 +71,7 @@ internal object Jwt {
 class OAuthException(message: String, val status: Int = 0) : Exception(message)
 
 internal object OAuthHttp {
-    val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    val json: Json get() = sharedJson
 
     data class Raw(val code: Int, val body: JsonObject, val text: String) {
         val ok get() = code in 200..299
@@ -85,14 +81,17 @@ internal object OAuthHttp {
         post(url, FormBody.Builder().apply { fields.forEach { (k, v) -> add(k, v) } }.build())
 
     fun postJson(url: String, fields: Map<String, String>): Raw =
-        post(url, JsonObject(fields.mapValues { JsonPrimitive(it.value) }).toString()
-            .toRequestBody("application/json".toMediaType()))
+        post(
+            url,
+            JsonObject(fields.mapValues { JsonPrimitive(it.value) }).toString()
+                .toRequestBody("application/json".toMediaType()),
+        )
 
     private fun post(url: String, body: RequestBody): Raw {
         val req = Request.Builder().url(url).post(body).header("Accept", "application/json").build()
-        ltd.usage.tracker.provider.vendors.httpClient.newCall(req).execute().use { resp ->
+        httpClient.newCall(req).execute().use { resp ->
             val text = resp.body?.string().orEmpty()
-            val parsed = runCatching { json.parseToJsonElement(text) as? JsonObject }.getOrNull()
+            val parsed = runCatching { sharedJson.parseToJsonElement(text) as? JsonObject }.getOrNull()
                 ?: JsonObject(emptyMap())
             return Raw(resp.code, parsed, text)
         }
@@ -100,7 +99,8 @@ internal object OAuthHttp {
 
     fun JsonObject.str(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
 
-    /** 解析令牌响应；缺 expires_in 时用 [defaultExpiresIn]。 */
+    fun JsonObject.requireStr(key: String): String = str(key) ?: error("缺少字段: $key")
+
     fun parseTokens(r: Raw, defaultExpiresIn: (accessToken: String) -> Long): OAuthTokens {
         if (!r.ok) throw error(r)
         val access = r.body.str("access_token") ?: throw OAuthException("令牌响应缺少 access_token", r.code)
@@ -112,7 +112,6 @@ internal object OAuthHttp {
         )
     }
 
-    /** 错误整理：error 可能是字符串，也可能是 {type, message} 对象（Anthropic）。 */
     fun error(r: Raw): OAuthException {
         val e = r.body["error"]
         val code = (e as? JsonPrimitive)?.contentOrNull ?: (e as? JsonObject)?.str("type")
@@ -131,4 +130,62 @@ internal object OAuthHttp {
             r.code,
         )
     }
+}
+
+/** 通用设备码轮询步进结果，供 [XaiLoginFlow] 与 [CodexLoginFlow] 共用。 */
+internal sealed interface DevicePollStep<out R> {
+    data class Done<R>(val result: R) : DevicePollStep<R>
+    data object Pending : DevicePollStep<Nothing>
+    data object SlowDown : DevicePollStep<Nothing>
+    data class Failed(val message: String) : DevicePollStep<Nothing>
+}
+
+/**
+ * 共享设备码登录引擎：申请设备码 → 发 CodeReady → 按 interval 轮询 → 完成 / 失败 / 超时。
+ * 统一处理 CancellationException 透传与单次网络异常忽略。
+ */
+internal fun <D, R, E> deviceCodeFlow(
+    now: () -> Long,
+    requestDeviceCode: () -> D,
+    expiresInSeconds: (D) -> Int,
+    intervalSeconds: (D) -> Int,
+    onCodeReady: (D) -> E,
+    onAuthorized: (R) -> E,
+    onFailed: (String) -> E,
+    formatError: (prefix: String, Throwable) -> String = { p, e ->
+        if (e is OAuthException) e.message.orEmpty() else "$p: ${e.message ?: e.javaClass.simpleName}"
+    },
+    poll: (D) -> DevicePollStep<R>,
+): Flow<E> = flow {
+    val device = withContext(Dispatchers.IO) { runCatching { requestDeviceCode() } }
+        .getOrElse { e ->
+            if (e is CancellationException) throw e
+            emit(onFailed(formatError("获取设备码失败", e)))
+            return@flow
+        }
+    emit(onCodeReady(device))
+
+    val deadline = now() + expiresInSeconds(device) * 1000L
+    var interval = intervalSeconds(device) * 1000L
+    while (now() < deadline) {
+        delay(interval)
+        val step = withContext(Dispatchers.IO) {
+            runCatching { poll(device) }
+                .onFailure { if (it is CancellationException) throw it }
+                .getOrNull()
+        }
+        when (step) {
+            is DevicePollStep.Done -> {
+                emit(onAuthorized(step.result))
+                return@flow
+            }
+            is DevicePollStep.Pending, null -> Unit
+            is DevicePollStep.SlowDown -> interval += 5000
+            is DevicePollStep.Failed -> {
+                emit(onFailed(step.message))
+                return@flow
+            }
+        }
+    }
+    emit(onFailed("登录超时，请重试"))
 }
